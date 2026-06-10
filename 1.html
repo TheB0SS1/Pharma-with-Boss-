@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pharma with Boss - Exam Portal</title>
+    <style>
+        /* --- CSS Variables & Reset --- */
+        :root {
+            --primary-color: #D32F2F; /* Professional Red */
+            --primary-light: #FFEBEE;
+            --secondary-color: #212121;
+            --bg-color: #FFFFFF;
+            --gray-light: #F5F5F5;
+            --success-color: #2E7D32;
+            --error-color: #C62828;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--gray-light);
+            color: var(--secondary-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .brand-name { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px; }
+        .subtitle { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+
+        /* --- Main Layout --- */
+        main {
+            flex: 1;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .view { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Mode Selection Screen --- */
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .mode-card {
+            background: var(--bg-color); padding: 30px; border-radius: var(--border-radius);
+            box-shadow: var(--shadow); border-left: 6px solid var(--primary-color);
+            cursor: pointer; transition: transform 0.2s; text-align: center;
+        }
+        .mode-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .mode-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+        .mode-title { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); margin-bottom: 10px; }
+        .mode-desc { color: #666; font-size: 0.95rem; }
+
+        /* --- Lecture Selection Screen --- */
+        .lectures-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+        .lecture-card {
+            background: var(--bg-color); padding: 20px; border-radius: var(--border-radius);
+            box-shadow: var(--shadow); border-left: 5px solid var(--primary-color);
+            cursor: pointer; transition: transform 0.2s; display: flex; justify-content: space-between; align-items: center;
+        }
+        .lecture-card:hover { transform: translateY(-3px); box-shadow: 0 6px 25px rgba(0,0,0,0.12); }
+        .lecture-info h3 { font-size: 1.1rem; color: #333; margin-bottom: 5px; }
+        .lecture-info p { font-size: 0.9rem; color: #666; }
+        .lecture-status { text-align: right; min-width: 80px; }
+        .status-badge {
+            display: inline-block; padding: 4px 10px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: bold; background: #eee; color: #777;
+        }
+        .status-badge.active { background: var(--primary-light); color: var(--primary-color); border: 1px solid var(--primary-color); }
+
+        /* --- Back Button --- */
+        .back-btn {
+            background: none; border: none; color: #666; font-size: 0.9rem;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;
+        }
+        .back-btn:hover { color: var(--primary-color); }
+
+        /* --- Quiz UI --- */
+        .card { background: var(--bg-color); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow); text-align: center; }
+        
+        .progress-bar-container { background: #e0e0e0; height: 6px; width: 100%; border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: var(--primary-color); width: 0%; transition: width 0.3s ease; }
+
+        .stats-bar { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.9rem; font-weight: 600; color: #666; }
+        
+        .timer-badge {
+            background: var(--primary-light); color: var(--primary-color);
+            padding: 4px 12px; border-radius: 20px; display: flex; align-items: center; gap: 5px;
+        }
+        .timer-badge.warning { background: #ffebee; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .question-card { background: var(--bg-color); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow); margin-bottom: 20px; text-align: left; }
+        
+        .lecture-tag {
+            display: inline-block; background: #eee; color: #333; font-size: 0.75rem;
+            padding: 4px 8px; border-radius: 4px; margin-bottom: 10px; text-transform: uppercase; font-weight: bold;
+        }
+        .question-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; color: #222; }
+
+        .options-list { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn {
+            background: white; border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px;
+            text-align: left; cursor: pointer; font-size: 1rem; transition: all 0.2s; position: relative;
+        }
+        .option-btn:hover:not(:disabled) { border-color: var(--primary-color); background: var(--primary-light); }
+        .option-btn.correct { border-color: var(--success-color); background-color: #e8f5e9; color: var(--success-color); font-weight: 600; }
+        .option-btn.correct::after { content: "✓"; position: absolute; right: 15px; font-weight: bold; }
+        .option-btn.wrong { border-color: var(--error-color); background-color: #ffebee; color: var(--error-color); }
+        .option-btn.wrong::after { content: "✕"; position: absolute; right: 15px; font-weight: bold; }
+        .option-btn:disabled { cursor: default; }
+
+        .explanation-box {
+            margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid var(--primary-color);
+            border-radius: 4px; display: none; animation: slideDown 0.3s ease;
+        }
+        .explanation-box.show { display: block; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Buttons --- */
+        .btn {
+            background-color: var(--primary-color); color: white; border: none; padding: 14px 28px;
+            font-size: 1rem; border-radius: 50px; cursor: pointer; transition: transform 0.2s;
+            font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:hover { background-color: #b71c1c; transform: translateY(-2px); }
+        .btn-secondary { background-color: transparent; border: 2px solid var(--primary-color); color: var(--primary-color); margin-top: 10px; }
+        .btn-secondary:hover { background-color: var(--primary-light); }
+
+        /* --- Result Screen --- */
+        .result-score { font-size: 3rem; font-weight: 800; color: var(--primary-color); margin: 10px 0; }
+        .score-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; text-align: center; }
+        .detail-item { background: #f5f5f5; padding: 10px; border-radius: 8px; }
+        .detail-val { font-weight: bold; display: block; font-size: 1.2rem; }
+
+        footer { text-align: center; padding: 20px; font-size: 0.8rem; color: #888; margin-top: auto; }
+        @media (min-width: 600px) { .lectures-grid { grid-template-columns: 1fr 1fr; } .mode-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-name">Pharma with Boss</div>
+        <div class="subtitle">Professional Pharmacology Exam Platform</div>
+    </header>
+
+    <main>
+        <!-- 1. Mode Selection Screen -->
+        <section id="mode-screen" class="view active">
+            <div style="text-align: center;">
+                <h2 style="color: var(--secondary-color); margin-bottom: 10px;">Welcome to the Exam Portal</h2>
+                <p style="color: #666;">Please select the exam mode you wish to take.</p>
+            </div>
+            
+            <div class="mode-grid">
+                <div class="mode-card" onclick="selectMode('mcq')">
+                    <span class="mode-icon">📝</span>
+                    <div class="mode-title">Multiple Choice</div>
+                    <div class="mode-desc">160 Questions covering all 4 Lectures.</div>
+                </div>
+                <div class="mode-card" onclick="selectMode('tf')">
+                    <span class="mode-icon">✔️</span>
+                    <div class="mode-title">True / False</div>
+                    <div class="mode-desc">70 Questions covering all 4 Lectures.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Lecture Selection Screen -->
+        <section id="lecture-screen" class="view">
+            <button class="back-btn" onclick="goToModeScreen()">&larr; Back to Mode Selection</button>
+            <h2 style="text-align: center; margin-bottom: 20px; color: var(--primary-color);" id="mode-title-display">Select Lecture</h2>
+            
+            <div class="lectures-grid" id="lectures-container">
+                <!-- Cards injected by JS -->
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn btn-secondary" onclick="clearAllData()" style="font-size: 0.8rem; padding: 8px 16px; border:none; color: #999;">Reset All Data</button>
+            </div>
+        </section>
+
+        <!-- 3. Quiz Screen -->
+        <section id="quiz-screen" class="view">
+            <button class="back-btn" onclick="goToLectureScreen()">&larr; Back to Lectures</button>
+            
+            <div class="stats-bar">
+                <span id="q-counter">Question 1</span>
+                <div class="timer-badge" id="timer-display"><span>⏱</span> <span id="time-left">60</span>s</div>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+
+            <div class="question-card">
+                <span class="lecture-tag" id="current-lecture-tag">Lecture 1</span>
+                <div class="question-text" id="question-text">Loading...</div>
+                <div class="options-list" id="options-container"></div>
+                <div class="explanation-box" id="explanation-box">
+                    <span class="explanation-title" style="color:var(--primary-color)">Explanation:</span>
+                    <p id="explanation-text"></p>
+                </div>
+            </div>
+
+            <button class="btn" id="next-btn" onclick="nextQuestion()" style="display:none; margin: 0 auto; width:100%;">Next Question ➜</button>
+        </section>
+
+        <!-- 4. Result Screen -->
+        <section id="result-screen" class="view">
+            <div class="card">
+                <h2 id="result-lecture-title">Lecture Completed!</h2>
+                <p>Here is your performance summary.</p>
+                <div class="result-score" id="final-score">0%</div>
+                <div class="score-details">
+                    <div class="detail-item"><span style="color:#2E7D32">Correct</span><span class="detail-val" id="final-correct">0</span></div>
+                    <div class="detail-item"><span style="color:#C62828">Wrong</span><span class="detail-val" id="final-wrong">0</span></div>
+                </div>
+                <button class="btn" onclick="restartCurrentLecture()">Retake Lecture</button>
+                <button class="btn btn-secondary" onclick="goToLectureScreen()">Back to Lectures</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>&copy; 2026 Pharma with Boss. All Rights Reserved.</footer>
+
+    <script>
+        // --- DATA: MCQ (160 Questions) ---
+        // Re-using the dataset from the previous prompt
+        const mcqQuestions = [
+            // Lecture 1: NSAIDs
+            {q:"Which enzyme is inhibited by all traditional NSAIDs to produce analgesic, antipyretic, and anti-inflammatory effects?", o:["Lipoxygenase","Cyclooxygenase (COX)","Phospholipase A2","Acetylcholinesterase","Xanthine oxidase"], a:1, e:"NSAIDs inhibit conversion of arachidonic acid to Prostaglandins & Thromboxane by inhibition of Cyclooxygenase enzyme (COX).", l:"NSAIDs", t:"Theory"},
+            {q:"Which COX enzyme is considered 'constitutive' (always present) and responsible for protecting the stomach lining?", o:["COX-1","COX-2","COX-3","LOX","COX-4"], a:0, e:"COX-1 is 'Constitutive Physiological' with sites including the stomach where it prevents peptic ulcers.", l:"NSAIDs", t:"Theory"},
+            {q:"Which COX enzyme is 'inducible' (produced during inflammation) and upregulated by pro-inflammatory mediators like IL-1 and TNF?", o:["COX-1","COX-2","COX-3","COX-4","LOX"], a:1, e:"COX-2 (Inducible Pathological). Induced during inflammation. Upregulated by pro-inflammatory mediators: IL-1, IL-2, TNF, oncogenes.", l:"NSAIDs", t:"Theory"},
+            {q:"Where is COX-3 primarily located in the body?", o:["Stomach and kidneys","Platelets and blood vessels","Central Nervous System (CNS) and Heart","Liver and lungs","Joints and synovial fluid"], a:2, e:"COX-3 (Central). Located in CNS & Heart.", l:"NSAIDs", t:"Theory"},
+            {q:"Which effect is produced by Paracetamol (Acetaminophen) but NOT by other NSAIDs?", o:["Analgesia","Antipyresis","Anti-inflammatory effect","Gastrointestinal irritation","Platelet inhibition"], a:2, e:"Paracetamol has 'Minimal / No anti-inflammatory effect' because it primarily works via central COX-3 inhibition.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the specific antiplatelet dose of Aspirin (Acetylsalicylic Acid)?", o:["500 mg once daily","75-150 mg daily","300 mg four times daily","1000 mg as a single dose","25 mg weekly"], a:1, e:"Antiplatelet. Dose: 75-150 mg/day.", l:"NSAIDs", t:"Theory"},
+            {q:"Which NSAID is explicitly contraindicated in children under 16 years (UK) or 19 years (FDA) due to the risk of Reye's syndrome?", o:["Ibuprofen","Paracetamol","Aspirin","Naproxen","Celecoxib"], a:2, e:"Aspirin contraindicated in children. Under 16 years (UK). Under 19 years (FDA). Risk of: Encephalopathy (brain damage), Liver damage.", l:"NSAIDs", t:"Theory"},
+            {q:"Which NSAID is described as the 'Most toxic NSAID' and is best reserved for severe anti-inflammatory use?", o:["Ibuprofen","Diclofenac","Indomethacin (Indocid®)","Naproxen","Celecoxib"], a:2, e:"Indomethacin is labeled 'Most toxic NSAID' and is 'Best used as: Anti-inflammatory / Anti-rheumatic.'", l:"NSAIDs", t:"Theory"},
+            {q:"Why is Diclofenac recommended for asthmatic patients who require an NSAID?", o:["It is a selective COX-1 inhibitor","It has additional Lipoxygenase (LOX) inhibiting activity","It does not cross the blood-brain barrier","It is a prodrug with no gastric effects","It causes significant bronchodilation"], a:1, e:"Diclofenac has 'Additional action: Lipoxygenase (LOX) inhibition. Recommended in asthmatic patients.'", l:"NSAIDs", t:"Theory"},
+            {q:"Which Propionic acid derivative is explicitly stated to be '20× stronger than Aspirin'?", o:["Ibuprofen","Ketoprofen","Fenoprofen","Naproxen (Naprosyn®)","Flurbiprofen"], a:3, e:"Naproxen (Naprosyn) 20× stronger than Aspirin.", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug is a Selective COX-2 inhibitor with less gastric toxicity but increased cardiovascular risk?", o:["Aspirin","Ibuprofen","Indomethacin","Celecoxib (Celebrex®)","Paracetamol"], a:3, e:"Selective COX-2 Inhibitors... Less gastric toxicity... Indications: Selective COX-2 inhibitors. Examples: Celecoxib.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the primary mechanism by which NSAIDs cause gastric ulcers?", o:["Increasing gastric acid secretion","Inhibiting COX-1 derived prostaglandins that protect the gastric mucosa","Direct erosion of the stomach lining","Stimulating histamine release","Blocking H2 receptors"], a:1, e:"NSAIDs inhibit COX-1 & COX-2... Prostaglandins (PGs) decrease HCl secretion. Inhibition leads to damage of gastric mucosa and Gastric ulcer.", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug is a synthetic Prostaglandin E analogue used specifically to prevent NSAID-induced gastric ulcers?", o:["Omeprazole","Ranitidine","Misoprostol","Sucralfate","Pantoprazole"], a:2, e:"Synthetic Prostaglandin E analogue: Misoprostol. Use: Prevention of NSAIDs-induced gastric ulcers.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the primary renal adverse effect of chronic NSAID use?", o:["Glomerulonephritis","Analgesic nephropathy","Renal calculi","Pyelonephritis","Nephrotic syndrome"], a:1, e:"Analgesic nephropathy occurs with chronic or prolonged use of NSAIDs.", l:"NSAIDs", t:"Theory"},
+            {q:"Why do selective COX-2 inhibitors (like Celecoxib) increase the risk of Myocardial Infarction (MI)?", o:["They increase LDL cholesterol","They inhibit prostacyclin (PGI2 - protective) without inhibiting thromboxane (TXA2 - thrombotic)","They cause direct coronary vasoconstriction","They increase platelet count","They cause severe hypotension"], a:1, e:"Patients with CVD taking NSAIDs, especially Selective COX-2 inhibitors, have higher risk of MI.", l:"NSAIDs", t:"Theory"},
+            {q:"Which of the following is NOT a typical use of NSAIDs according to the text?", o:["Analgesic (pain relief)","Antipyretic (fever reduction)","Anti-inflammatory","Antibacterial","Anti-rheumatic"], a:3, e:"The text lists 'Analgesic, Antipyretic, Anti-inflammatory' as main uses. Antibacterial is not mentioned.", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug is an Indole derivative?", o:["Ibuprofen","Celecoxib","Indomethacin","Aspirin","Paracetamol"], a:2, e:"Indole Derivatives example: Indomethacin (Indocid®).", l:"NSAIDs", t:"Theory"},
+            {q:"What is the mechanism of action of Omeprazole when added to NSAID therapy for gastric protection?", o:["It blocks H2 histamine receptors","It neutralizes existing stomach acid","It is a Proton Pump Inhibitor (PPI)","It coats the gastric mucosa","It replaces prostaglandins"], a:2, e:"Proton Pump Inhibitors (PPIs): Omeprazole, Pantoprazole are used for Prevention of NSAIDs-induced gastric ulcers.", l:"NSAIDs", t:"Theory"},
+            {q:"A patient with a bleeding disorder needs an antipyretic. Which drug is the safest option?", o:["Aspirin","Ibuprofen","Naproxen","Paracetamol","Ketoprofen"], a:3, e:"Paracetamol has 'Minimal / No anti-inflammatory effect' and does not affect platelets, making it safe in bleeding disorders.", l:"NSAIDs", t:"Theory"},
+            {q:"Which of the following is an Aniline derivative that is a prodrug for Paracetamol?", o:["Phenacetin","Lidocaine","Procaine","Codeine","Morphine"], a:0, e:"Aniline Derivatives: Phenacetin (Prodrug of Paracetamol).", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug is NOT a true NSAID because it lacks anti-inflammatory effect?", o:["Ibuprofen","Naproxen","Diclofenac","Paracetamol (Acetaminophen)","Aspirin"], a:3, e:"Paracetamol is 'NOT a true NSAID' and has 'Minimal / No anti-inflammatory effect.'", l:"NSAIDs", t:"Theory"},
+            {q:"What is the mechanism of the antipyretic effect of Paracetamol?", o:["Peripheral COX-1 inhibition","Peripheral COX-2 inhibition","Central COX-3 inhibition","Lipoxygenase activation","Opioid receptor activation"], a:2, e:"Paracetamol works via 'central COX-3 inhibition' to produce analgesic and antipyretic effects.", l:"NSAIDs", t:"Theory"},
+            {q:"Which condition is a contraindication for using NSAIDs according to the text?", o:["Mild headache","Osteoarthritis","Peptic ulcer disease","Dental pain","Dysmenorrhea"], a:2, e:"Peptic ulcer disease is listed under 'Contraindications of NSAIDs.'", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug is considered the safest for a patient with both cardiovascular disease AND a history of peptic ulcer?", o:["Naproxen","Ibuprofen","Celecoxib","Paracetamol","Aspirin"], a:3, e:"Paracetamol is 'Safe in: Pregnancy, Peptic ulcer, Asthma, Children with viral infections.'", l:"NSAIDs", t:"Theory"},
+            {q:"What is the main characteristic of Selective COX-2 inhibitors regarding platelet function?", o:["They irreversibly inhibit platelets","They cause platelet aggregation","They cause less platelet inhibition than non-selective NSAIDs","They increase platelet count","They have no effect on platelets"], a:2, e:"Selective COX-2 inhibitors have 'Less platelet inhibition' compared to non-selective NSAIDs.", l:"NSAIDs", t:"Theory"},
+            {q:"Which of the following is a Salicylate?", o:["Ibuprofen","Aspirin (Acetylsalicylic Acid)","Celecoxib","Indomethacin","Paracetamol"], a:1, e:"Salicylates example: Aspirin (Acetylsalicylic Acid).", l:"NSAIDs", t:"Theory"},
+            {q:"What is the primary mechanism of NSAIDs at the cellular level?", o:["Activation of opioid receptors","Blockade of sodium channels","Inhibition of cyclooxygenase enzyme","Activation of GABA receptors","Inhibition of calcium channels"], a:2, e:"NSAIDs inhibit conversion of arachidonic acid to Prostaglandins & Thromboxane by inhibition of Cyclooxygenase enzyme (COX).", l:"NSAIDs", t:"Theory"},
+            {q:"Which Propionic acid derivative is available in gel form for faster relief in dental practice?", o:["Naproxen","Ketoprofen","Ibuprofen","Indomethacin","Celecoxib"], a:2, e:"Ibuprofen 400 mg is highly effective for postoperative dental pain... gel forms give faster relief.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the effect of NSAIDs on renal blood flow (RBF)?", o:["Increase RBF","No effect on RBF","Decrease RBF by inhibiting vasodilatory prostaglandins","Increase RBF by activating renin","Convert RBF to venous flow"], a:2, e:"NSAIDs cause 'Renal vasoconstriction' leading to decreased 'Renal Blood Flow (RBF).'", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug was a Selective COX-2 inhibitor that was withdrawn from the market due to cardiovascular risks?", o:["Celecoxib","Rofecoxib (Vioxx®)","Valdecoxib","Etoricoxib","Parecoxib"], a:1, e:"Rofecoxib (Vioxx®) is a Selective COX-2 inhibitor. It was withdrawn in 2004.", l:"NSAIDs", t:"Theory"},
+            {q:"According to the text, what is the first-line treatment for mild to moderate acute pain?", o:["Opioids only","Paracetamol & NSAIDs","Corticosteroids","Muscle relaxants","Antidepressants"], a:1, e:"Mild to moderate acute pain (First-line: Paracetamol & NSAIDs).", l:"NSAIDs", t:"Theory"},
+            {q:"Which of the following is a common adverse effect of NSAIDs on the central nervous system?", o:["Seizures","Dizziness and headache","Stroke","Coma","Parkinsonism"], a:1, e:"Dizziness, headache are adverse effects that may lead to serious complications if ignored.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the role of the dentist in prescribing NSAIDs according to the text?", o:["To treat bacterial infections","To control pain & inflammation in pulpal & periapical diseases","To anesthetize the tooth","To whiten teeth","To fill root canals"], a:1, e:"Dentists frequently prescribe NSAIDs for: Pulpal & periapical diseases, Tooth extraction pain, Root canal infections.", l:"NSAIDs", t:"Theory"},
+            {q:"Which NSAID is considered 'one of the most potent' and is 'better tolerated' with multiple dosage forms including eye drops?", o:["Ibuprofen","Diclofenac","Naproxen","Aspirin","Celecoxib"], a:1, e:"Diclofenac. One of the most potent NSAIDs. Better tolerated. Dosage Forms: Tablets, Capsules, Suppositories, I.M, Gel, Eye drops.", l:"NSAIDs", t:"Theory"},
+            {q:"Why are topical NSAIDs preferred over oral NSAIDs for certain conditions?", o:["They are more potent","Similar efficacy with lower systemic side effects","They work faster","They are cheaper","They have no side effects at all"], a:1, e:"Topical NSAIDs are preferred due to: Similar efficacy, Lower systemic side effects.", l:"NSAIDs", t:"Theory"},
+            {q:"Which of the following is NOT a contraindication for NSAIDs as listed in the text?", o:["Asthma","Cardiovascular diseases","Diabetes mellitus","Peptic ulcer disease","Pregnancy (late pregnancy)"], a:2, e:"Text lists Asthma, CVD, Renal disease, Coagulation disorders, Peptic ulcer, and late Pregnancy. Diabetes is not listed.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the effect of Aspirin on COX-1 versus COX-2?", o:["Inhibits COX-2 more than COX-1","Inhibits COX-1 more than COX-2","Inhibits both equally","Inhibits neither","Activates both"], a:1, e:"Aspirin inhibits COX-1 more than COX-2.", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug is specifically used for 'Gingival inflammation' and 'Dysmenorrhea' as per the text?", o:["Ibuprofen","Naproxen","Ketoprofen (Ketofan®)","Aspirin","Celecoxib"], a:2, e:"Ketoprofen. Used for: Arthritis pain, Gingival inflammation, Dysmenorrhea.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the primary reason NSAIDs cause edema and hypertension?", o:["Direct cardiac stimulation","Sodium and water retention due to renal prostaglandin inhibition","Increased sympathetic tone","Vasodilation","Increased blood viscosity"], a:1, e:"NSAIDs cause activation of 'Renin Aldosterone system' leading to 'Edema + Renal vasoconstriction.'", l:"NSAIDs", t:"Theory"},
+            {q:"Which of the following is a natural source of salicylic acid historically used?", o:["Willow bark","Penicillin mold","Opium poppy","Foxglove","Cinchona bark"], a:0, e:"Historically derived from natural salicylate sources like willow bark.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the maximum daily dose range for Ibuprofen according to the text?", o:["100-200 mg","250-500 mg","100-600 mg (depending on formulation)","1000-2000 mg","25-50 mg"], a:2, e:"Ibuprofen (Brufen). 100-600 mg (tablet, pack, suppository, syrup).", l:"NSAIDs", t:"Theory"},
+            {q:"Which drug is a synthetic opioid analgesic that is NOT an NSAID? (Distractor within NSAID section)", o:["Paracetamol","Codeine","Celecoxib","Ibuprofen","Aspirin"], a:1, e:"Codeine is an opioid (Lecture 2), not an NSAID.", l:"NSAIDs", t:"Theory"},
+            {q:"What is the historical significance of 1899 according to the text?", o:["Discovery of Penicillin","Bayer introduced Aspirin in powder then tablet form","First heart transplant","Discovery of DNA","First dental implant"], a:1, e:"1899: Bayer introduced acetylsalicylic acid (Aspirin) in powder then tablet form.", l:"NSAIDs", t:"Theory"},
+            // NSAIDs Cases
+            {q:"[Case 1] A 65-year-old male with a history of Myocardial Infarction (CVD) requires pain relief for acute dental pain. Which NSAID should be AVOIDED due to the highest risk of thrombosis?", o:["Naproxen","Aspirin (low dose)","Celecoxib (Selective COX-2 inhibitor)","Paracetamol","Ibuprofen (low dose)"], a:2, e:"Case 1: Patient with CVD. Avoid: Selective COX-2 inhibitors (e.g. Celecoxib) → ↑ risk of thrombosis.", l:"NSAIDs", t:"Case"},
+            {q:"[Case 2] A 55-year-old female with a history of Peptic Ulcer Disease needs an NSAID for osteoarthritis. What is the preferred pharmacological strategy according to the text?", o:["Use Aspirin alone","Use Ibuprofen alone at high dose","Use a Selective COX-2 inhibitor (Celecoxib) OR add a PPI (Omeprazole) to a non-selective NSAID","Use IV NSAIDs only","Avoid all pain relief"], a:2, e:"Case 2: Peptic Ulcer. Preferred: Selective COX-2 inhibitor (Celecoxib) OR Better approach: Add PPI.", l:"NSAIDs", t:"Case"},
+            {q:"[Case 3] A 70-year-old patient has BOTH Cardiovascular Disease (CVD) AND a history of Peptic Ulcer. What is the BEST choice for mild to moderate pain relief?", o:["Naproxen alone","Celecoxib alone","Aspirin 325 mg","Paracetamol (Acetaminophen)","Ibuprofen 800 mg"], a:3, e:"Case 3: BOTH CVD + Peptic Ulcer. Best choice: Paracetamol (analgesic & antipyretic only).", l:"NSAIDs", t:"Case"},
+            {q:"[Case 4] A patient with BOTH CVD and Peptic Ulcer MUST take an NSAID for severe inflammatory pain. Which regimen carries the 'least harm' according to the text?", o:["Celecoxib + Misoprostol","Naproxen + PPI (Omeprazole) with caution","Aspirin + PPI","Indomethacin alone","Ketorolac IV"], a:1, e:"If NSAID is MUST: Use Naproxen + PPI with caution.", l:"NSAIDs", t:"Case"},
+            {q:"[Case 5] A 45-year-old male takes Ibuprofen for 2 weeks. He presents with black tarry stools (melena) and epigastric pain. What is the most likely mechanism?", o:["Increased gastric acid secretion","Inhibition of COX-1 derived prostaglandins leading to loss of gastric mucosal protection","Direct chemical burn from the pill","Increased platelet aggregation","Increased intestinal motility"], a:1, e:"NSAIDs inhibit COX-1... Prostaglandins (PGs) decrease HCl secretion. Inhibition leads to damage of gastric mucosa.", l:"NSAIDs", t:"Case"},
+            {q:"[Case 6] A 30-year-old asthmatic patient requires an NSAID for post-surgical dental pain. Which NSAID is specifically recommended in the text for asthmatic patients?", o:["Aspirin","Ibuprofen","Diclofenac","Naproxen","Celecoxib"], a:2, e:"Diclofenac has 'Additional action: Lipoxygenase (LOX) inhibition. Recommended in asthmatic patients.'", l:"NSAIDs", t:"Case"},
+            {q:"[Case 7] A 2-year-old child has a high fever (104°F) and flu-like symptoms. Which drug is absolutely contraindicated?", o:["Paracetamol suspension","Ibuprofen drops","Aspirin (Acetylsalicylic acid)","Naproxen suspension","Acetaminophen suppository"], a:2, e:"Aspirin contraindicated in children. Risk of Reye's syndrome (Encephalopathy, Liver damage) after viral infections.", l:"NSAIDs", t:"Case"},
+            
+            // Lecture 2: Opioids
+            {q:"What is the definition of Narcotic Analgesics (Opioids)?", o:["Drugs that relieve pain by inhibiting peripheral COX enzymes","Drugs that relieve pain centrally by depressing the cerebral sensory cortex via opioid receptors","Drugs that cause loss of consciousness","Drugs that only work for inflammatory pain","Drugs that are always anti-inflammatory"], a:1, e:"Narcotic analgesics relieve pain centrally by depressing the cerebral sensory cortex. They act via opioid receptors.", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is an ENDOGENOUS opioid produced naturally in the body?", o:["Morphine","Codeine","Endorphin","Fentanyl","Heroin"], a:2, e:"Endogenous Opioids (Natural in Body): Endorphins, Dynorphins, Enkephalins.", l:"Opioids", t:"Theory"},
+            {q:"Which opioid receptor is responsible for most clinically significant effects including analgesia, respiratory depression, euphoria, and addiction?", o:["Kappa (κ)","Delta (δ)","Mu (μ)","Sigma (σ)","Epsilon (ε)"], a:2, e:"Mu (μ) receptor: Analgesia, miosis, respiratory depression, euphoria, addiction.", l:"Opioids", t:"Theory"},
+            {q:"Which opioid receptor mediates analgesia and sedation?", o:["Mu (μ)","Kappa (κ)","Delta (δ)","Sigma","NMDA"], a:1, e:"Kappa (κ) receptor: Analgesia, miosis, sedation.", l:"Opioids", t:"Theory"},
+            {q:"What is the difference between an 'Opiate' and an 'Opioid'?", o:["Opiates are synthetic; Opioids are natural","Opiates are natural (morphine, codeine); Opioids include natural, semi-synthetic, and synthetic","There is no difference","Opiates are for pain; Opioids are for cough","Opiates are antagonists; Opioids are agonists"], a:1, e:"Opiates: Natural drugs only (morphine & codeine). Opioids: Natural or synthetic compounds producing morphine-like effects.", l:"Opioids", t:"Theory"},
+            {q:"What is the origin of Morphine?", o:["Synthetic laboratory","Phenanthrene derivative of opium alkaloid (natural)","Semisynthetic from codeine","Endogenous peptide","Plant from South America"], a:1, e:"Morphine. Phenanthrene derivative of opium alkaloids. Natural strong opioid agonist.", l:"Opioids", t:"Theory"},
+            {q:"Why is Morphine contraindicated in labor?", o:["It causes prolonged labor","It crosses the placental barrier and causes neonatal asphyxia (respiratory depression)","It causes uterine rupture","It is ineffective in pregnant women","It causes maternal seizures"], a:1, e:"Morphine crosses Placental Barrier during labor → Neonatal asphyxia.", l:"Opioids", t:"Theory"},
+            {q:"What is the treatment for neonatal asphyxia caused by maternal morphine use?", o:["Oxygen only","Naloxone 0.4 mg IM to mother before labor OR intra-umbilical injection to baby","Epinephrine to the baby","Atropine to the mother","Flumazenil to the baby"], a:1, e:"Treatment: Naloxone 0.4 mg IM to mother before labor OR intra-umbilical injection to baby after labor.", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is a therapeutic use of Morphine?", o:["Mild headache","Cardiac pain (Myocardial infarction)","Diarrhea","Asthma","Insomnia"], a:1, e:"Therapeutic Uses of Morphine include Cardiac pain (e.g. Myocardial infarction).", l:"Opioids", t:"Theory"},
+            {q:"Which adverse effect of Morphine shows NO tolerance development (persists with chronic use)?", o:["Analgesia","Respiratory depression","Euphoria","Constipation","Sedation"], a:3, e:"Tolerance develops to Analgesia, Respiratory depression, Euphoria, Sedation. BUT NOT to Constipation, Miosis.", l:"Opioids", t:"Theory"},
+            {q:"What is the effect of Morphine on the pupils?", o:["Mydriasis (dilation)","Miosis (pin-point constriction)","No effect","Anisocoria (unequal pupils)","Cycloplegia"], a:1, e:"Adverse effect: Miosis (Pin-point pupil).", l:"Opioids", t:"Theory"},
+            {q:"What is the mechanism of the antitussive effect of Codeine?", o:["Peripheral numbing of the throat","Central suppression of the cough center in the medulla","Bronchodilation","Increased mucus production","Sedation only"], a:1, e:"Codeine has a 'Strong antitussive effect (like morphine)' acting centrally on the cough center.", l:"Opioids", t:"Theory"},
+            {q:"How potent is Codeine as an analgesic compared to Morphine?", o:["Equally potent","Twice as potent","1/10 the potency of Morphine","100 times more potent","1/100 the potency"], a:2, e:"Codeine: 1/10 potency as analgesic compared to Morphine.", l:"Opioids", t:"Theory"},
+            {q:"Which opioid is 100 times more potent than Morphine and has a rapid onset but short duration (15-30 minutes)?", o:["Codeine","Pethidine","Fentanyl","Tramadol","Methadone"], a:2, e:"Fentanyl is 100 times more potent than morphine. Rapid onset. Short duration: 15-30 minutes.", l:"Opioids", t:"Theory"},
+            {q:"Why should Fentanyl NOT be given orally?", o:["It causes severe nausea","It is destroyed by stomach acid","Severe first-pass metabolism","It stains the teeth","It is only effective intravenously"], a:2, e:"Should NOT be given orally. Reason: Severe first pass metabolism.", l:"Opioids", t:"Theory"},
+            {q:"What is the primary clinical use of Methadone?", o:["Severe acute dental pain","Treatment of opioid addiction (Detoxification & Maintenance)","As a pre-anesthetic agent","As an antidiarrheal","As a muscle relaxant"], a:1, e:"Methadone: Main Use is Treatment of opioid addiction (Detoxification & Maintenance).", l:"Opioids", t:"Theory"},
+            {q:"What is the unique mechanism of Tramadol that makes it effective for neuropathic pain?", o:["Selective COX-2 inhibition","Sodium channel blockade","Inhibition of Noradrenaline and Serotonin reuptake (SNRI activity)","GABA agonism","NMDA antagonism"], a:2, e:"Tramadol: Non-opioid mechanism is Inhibiting uptake of noradrenaline and serotonin (SNRI activity).", l:"Opioids", t:"Theory"},
+            {q:"What is the analgesic potency of Tramadol compared to Morphine?", o:["Equally potent","Twice as potent","1/10 the potency of Morphine","10 times more potent","1/100 the potency"], a:2, e:"Tramadol: Analgesic potency is 1/10 potency of morphine.", l:"Opioids", t:"Theory"},
+            {q:"Which adverse effect is MORE common with Tramadol compared to Morphine?", o:["Respiratory depression","Constipation","Seizures (convulsions)","Miosis","Addiction"], a:2, e:"Tramadol produces less Respiratory depression, Constipation, Addiction. BUT it increases risk of convulsions.", l:"Opioids", t:"Theory"},
+            {q:"What is the antidote for opioid overdose?", o:["Flumazenil","Naloxone","Activated charcoal","Atropine","Epinephrine"], a:1, e:"Naloxone is the standard opioid antagonist.", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is a semisynthetic opioid?", o:["Morphine","Codeine","Heroin","Fentanyl","Tramadol"], a:2, e:"Semisynthetic opioids example: Heroin.", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is a fully synthetic opioid?", o:["Morphine","Codeine","Heroin","Fentanyl","Endorphin"], a:3, e:"Fully synthetic opioids: Fentanyl, Pethidine, Tramadol.", l:"Opioids", t:"Theory"},
+            {q:"What is the effect of Morphine on blood pressure?", o:["Hypertension","No change","Hypotension (due to histamine release)","Severe fluctuation","Increased pulse pressure"], a:2, e:"Adverse effect: Hypotension (due to histamine release).", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is a characteristic of Pethidine (Meperidine)?", o:["It has no side effects","It has local anesthetic effect and less constipation than morphine","It is 100 times more potent than morphine","It is only used for cough","It has no addiction potential"], a:1, e:"Pethidine: Has local anesthetic effect. Less respiratory depression. Less constipation. Less addiction.", l:"Opioids", t:"Theory"},
+            {q:"What is the effect of Naloxone on Tramadol?", o:["Complete reversal of all effects","Partial antagonism (only partially reverses effects)","No effect at all","Potentiation of effects","Conversion to a toxic metabolite"], a:1, e:"Because tramadol has mixed mechanism, It is only partially antagonized by naloxone.", l:"Opioids", t:"Theory"},
+            {q:"What is the primary mechanism of Naloxone?", o:["Inverse agonist at Mu receptors","Competitive antagonist at Mu, Kappa, and Delta receptors","Non-competitive agonist","Allosteric modulator","Reuptake inhibitor"], a:1, e:"Naloxone competes with opioid agonists for binding to receptors without activating them.", l:"Opioids", t:"Theory"},
+            {q:"Which route of Fentanyl administration is used for long-term pain management in chronic cancer pain?", o:["Intravenous bolus","Oral tablets","Transdermal patch","Intramuscular injection","Sublingual spray"], a:2, e:"Fentanyl route: Transdermal patch.", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is NOT an adverse effect of Morphine?", o:["Respiratory depression","Miosis","Diarrhea","Constipation","Urinary retention"], a:2, e:"Opioids cause Constipation, not Diarrhea.", l:"Opioids", t:"Theory"},
+            {q:"What is the effect of Morphine on the cough reflex?", o:["It stimulates coughing","It has no effect","It suppresses coughing (antitussive)","It causes productive cough","It causes bronchospasm only"], a:2, e:"Use of Morphine and Codeine: Antitussive.", l:"Opioids", t:"Theory"},
+            {q:"Which endogenous opioid is produced by the body?", o:["Heroin","Dynorphin","Methadone","Pethidine","Fentanyl"], a:1, e:"Endogenous Opioids: Endorphins, Dynorphins, Enkephalins.", l:"Opioids", t:"Theory"},
+            {q:"What is the meaning of 'Tolerance' in the context of opioid use?", o:["An allergic reaction to the drug","The need for a higher dose to achieve the same effect with repeated use","The patient becomes addicted","The drug stops working completely","The patient vomits after each dose"], a:1, e:"Repeated use produces tolerance to: Respiratory depressant effect, Analgesic effect, Euphoric effect, Sedative effect.", l:"Opioids", t:"Theory"},
+            {q:"Which opioid is used as a pre-anesthetic medication to provide analgesia, amnesia, and sedation?", o:["Morphine","Codeine","Fentanyl","Tramadol","Pethidine"], a:0, e:"Use of Morphine: Pre-anesthetic Medication (Analgesia, Amnesia, Sedation).", l:"Opioids", t:"Theory"},
+            {q:"What is the specific effect of Morphine on the respiratory system?", o:["Respiratory stimulation","No effect","Respiratory depression and bronchospasm","Bronchodilation","Increased tidal volume"], a:2, e:"Adverse effect: Respiratory depression & bronchospasm.", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is a characteristic of Methadone?", o:["Short acting, given every 2 hours","Long acting, orally active, less severe withdrawal symptoms","Only available intravenously","Causes severe constipation","Antagonist at all receptors"], a:1, e:"Methadone: Orally active & long acting. Advantage: Gradual withdrawal smoother & less severe withdrawal symptoms.", l:"Opioids", t:"Theory"},
+            {q:"What is the mechanism of Pethidine's analgesic action?", o:["COX-2 inhibition","Mu receptor agonism (opioid) + local anesthetic effect","GABA agonism","Dopamine antagonism","Histamine release"], a:1, e:"Pethidine: Acts on opioid receptors and Has local anesthetic effect.", l:"Opioids", t:"Theory"},
+            {q:"Which drug is a natural phenanthrene opium alkaloid that is methyl-morphine?", o:["Morphine","Codeine","Heroin","Fentanyl","Naloxone"], a:1, e:"Codeine: Natural phenanthrene opium alkaloid. Methyl-morphine.", l:"Opioids", t:"Theory"},
+            {q:"What is the effect of Morphine on the urinary system?", o:["Increased urination","Urinary frequency","Urinary retention","No effect","Urinary incontinence"], a:2, e:"Adverse effect: Urinary retention.", l:"Opioids", t:"Theory"},
+            {q:"Which opioid is used for postoperative pain, chronic moderate pain, and neuropathic pain?", o:["Morphine","Codeine","Tramadol","Fentanyl","Heroin"], a:2, e:"Tramadol Uses: Postoperative pain, Chronic moderate pain, Neuropathic pain.", l:"Opioids", t:"Theory"},
+            {q:"What is the effect of Naloxone on morphine-induced respiratory depression?", o:["It worsens respiratory depression","It has no effect","It reverses respiratory depression","It takes 24 hours to work","It only works on the heart"], a:2, e:"Naloxone is a competitive antagonist that reverses all opioid effects including respiratory depression.", l:"Opioids", t:"Theory"},
+            {q:"Which of the following is a contraindication for Morphine?", o:["Cancer pain","Eye surgery (due to miosis interfering with assessment)","Myocardial infarction","Fracture pain","Post-operative pain"], a:1, e:"Eye surgery is listed under Contraindicated in for Morphine.", l:"Opioids", t:"Theory"},
+            {q:"What is the primary difference between Narcotic Analgesics and NSAIDs regarding potency?", o:["NSAIDs are more potent for severe pain","Narcotics are very potent; NSAIDs are less potent","They have equal potency","NSAIDs work faster","Narcotics have a ceiling effect"], a:1, e:"Comparison: Narcotic Analgesics Potency = Very potent. NSAIDs Potency = Less potent.", l:"Opioids", t:"Theory"},
+            {q:"Which drug is a mixed opioid/non-opioid analgesic that inhibits norepinephrine and serotonin reuptake?", o:["Morphine","Codeine","Tramadol","Fentanyl","Methadone"], a:2, e:"Tramadol: Mixed Opioid / Non-Opioid. Inhibits uptake of noradrenaline & serotonin.", l:"Opioids", t:"Theory"},
+            {q:"What is the effect of chronic opioid use on the body's production of endogenous endorphins?", o:["Increased production","No change","Decreased production (leading to dependence)","Conversion to dynorphins","Complete cessation"], a:2, e:"Exogenous opioids suppress the body's natural production of endorphins, leading to physical dependence.", l:"Opioids", t:"Theory"},
+            // Opioids Cases
+            {q:"[Case 1] A 60-year-old male is brought to the ER with severe crushing chest pain due to an MI. Morphine is administered. Which adverse effect is the MOST dangerous?", o:["Miosis","Nausea and vomiting","Respiratory depression","Constipation","Urinary retention"], a:2, e:"Respiratory depression is a key adverse effect of Morphine. In an MI patient, this can be fatal if not monitored.", l:"Opioids", t:"Case"},
+            {q:"[Case 2] A post-operative patient receives Morphine PCA. The nurse notes a respiratory rate of 8 breaths/min and pinpoint pupils. Which drug should be immediately administered?", o:["Flumazenil","Naloxone","Activated Charcoal","Atropine","Epinephrine"], a:1, e:"Treatment of respiratory depression from opioids is Naloxone.", l:"Opioids", t:"Case"},
+            {q:"[Case 3] A terminal cancer patient on high-dose oral Morphine develops severe nausea. Switched to Fentanyl patch. What is the advantage?", o:["Fentanyl is less potent","Fentanyl causes less nausea and constipation (bypasses GI tract)","Fentanyl is an antagonist","Fentanyl can be crushed","Fentanyl has no side effects"], a:1, e:"Transdermal patch bypasses the GI tract, reducing nausea and constipation associated with oral Morphine.", l:"Opioids", t:"Case"},
+            {q:"[Case 4] A patient with a history of opioid addiction requires pain control after surgery. Which opioid has the LOWEST abuse potential?", o:["Morphine","Hydromorphone","Tramadol","Oxycodone","Fentanyl"], a:2, e:"Tramadol has 'Less addiction' compared to Morphine.", l:"Opioids", t:"Case"},
+            {q:"[Case 5] A patient on an MAO inhibitor requires emergency pain relief. Which opioid is potentially fatal due to serotonin syndrome risk?", o:["Morphine","Codeine","Pethidine (Meperidine)","Fentanyl","Methadone"], a:2, e:"Pethidine has 'Increased risk of convulsions' and interacts dangerously with MAOIs.", l:"Opioids", t:"Case"},
+            {q:"[Case 6] A patient receiving Morphine complains it is not working as well as last month, but is still severely constipated. This is:", o:["Addiction","Tolerance (to analgesia, but NOT to constipation)","Physical dependence","Anaphylaxis","Tachyphylaxis"], a:1, e:"Tolerance develops to Analgesia, Respiratory depression, Euphoria, Sedation. BUT NOT to Constipation, Miosis.", l:"Opioids", t:"Case"},
+            {q:"[Case 7] A patient is found unconscious. Paramedic administers Naloxone IV. Patient wakes up. 45 mins later, stops breathing again. Why?", o:["Naloxone has a shorter duration of action (1 hour) than the opioid","The patient took another dose","Naloxone causes rebound respiratory depression","The patient has a brain bleed","Naloxone is only for alcohol"], a:0, e:"Naloxone has a short half-life. Long-acting opioids may outlast the antidote, requiring repeated dosing.", l:"Opioids", t:"Case"},
+
+            // Lecture 3: Anemias
+            {q:"What are the two major sites of blood cell formation (hematopoiesis) in the body?", o:["Liver and Spleen","Bone Marrow and Lymphatic Tissue","Heart and Lungs","Kidneys and Pancreas","Brain and Spinal cord"], a:1, e:"Formation of blood cells occurs mainly in two major sites: Bone Marrow and Lymphatic Tissue.", l:"Anemias", t:"Theory"},
+            {q:"Which type of anemia is the most frequent type worldwide?", o:["Macrocytic anemia","Aplastic anemia","Hemolytic anemia","Iron Deficiency Anemia","Megaloblastic anemia"], a:3, e:"Iron Deficiency Anemia is the most frequent type of anemia worldwide.", l:"Anemias", t:"Theory"},
+            {q:"What is the primary cause of Iron Deficiency Anemia in pregnancy?", o:["Decreased iron supply","Increased iron loss","Increased iron requirement for fetal development","Decreased absorption","Vitamin C deficiency"], a:2, e:"Pregnancy requires more iron for fetal development (Increased iron requirement).", l:"Anemias", t:"Theory"},
+            {q:"What is the first-line treatment for Iron Deficiency Anemia?", o:["Parenteral iron","Blood transfusion","Oral iron preparations (e.g., Ferrous sulfate)","Vitamin B12 injections","Folic acid tablets"], a:2, e:"Treatment mainly involves iron supplementation. Oral Preparation of Iron is usually the first line.", l:"Anemias", t:"Theory"},
+            {q:"Why should oral iron be given after meals?", o:["To increase absorption","To reduce gastrointestinal irritation","To prevent staining of teeth","To increase appetite","To chelate with food"], a:1, e:"Should be given after meals to reduce gastrointestinal irritation.", l:"Anemias", t:"Theory"},
+            {q:"Which type of anemia is also known as Megaloblastic Anemia?", o:["Iron Deficiency Anemia","Aplastic Anemia","Hemolytic Anemia","Pernicious Anemia / Macrocytic Anemia","Sickle cell anemia"], a:3, e:"Macrocytic Anemia (Pernicious Anemia) is also known as Megaloblastic Anemia.", l:"Anemias", t:"Theory"},
+            {q:"Deficiency of which two vitamins causes Megaloblastic Anemia?", o:["Iron and Copper","Vitamin B12 and Folic Acid","Vitamin C and D","Vitamin A and E","Thiamine and Riboflavin"], a:1, e:"The main cause is deficiency of: Vitamin B12 and Folic acid.", l:"Anemias", t:"Theory"},
+            {q:"What is 'Intrinsic Factor' and where is it produced?", o:["An enzyme in the small intestine that digests iron","A glycoprotein produced by parietal cells of the stomach necessary for Vitamin B12 absorption","A hormone produced by the kidney that stimulates RBC production","A protein in the liver that stores iron","A factor in the blood that clots platelets"], a:1, e:"Intrinsic Factor is produced by parietal cells of the stomach and is essential for absorption of Vitamin B12.", l:"Anemias", t:"Theory"},
+            {q:"What is the cause of Pernicious Anemia?", o:["Lack of iron in the diet","Failure of the stomach to produce Intrinsic Factor leading to Vitamin B12 malabsorption","Bone marrow failure","Destruction of red blood cells","Chronic bleeding"], a:1, e:"Without intrinsic factor, Vitamin B12 cannot be absorbed properly.", l:"Anemias", t:"Theory"},
+            {q:"Which preparation of Vitamin B12 is used for a sustained release effect?", o:["Cyanocobalamin","Hydroxocobalamin","Methylcobalamin","Adenosylcobalamin","Ferrous sulfate"], a:1, e:"Hydroxocobalamin injection is used for sustained release effect.", l:"Anemias", t:"Theory"},
+            {q:"What is the primary cause of Aplastic Anemia?", o:["Iron deficiency","Vitamin B12 deficiency","Loss of hemopoietic tissue in the bone marrow (e.g., from cytotoxic drugs or radiation)","G6PD deficiency","Chronic blood loss"], a:2, e:"Aplastic anemia occurs due to loss of hemopoietic tissue in the bone marrow. Causes: Cytotoxic drugs, Ionizing radiation.", l:"Anemias", t:"Theory"},
+            {q:"Which drug can cause Hemolytic Anemia in patients with G6PD deficiency?", o:["Paracetamol","Aspirin","Primaquine and Sulphonamides","Ibuprofen","Vitamin B12"], a:2, e:"Primaquine and Sulphonamides may induce hemolysis in individuals with G6PD deficiency.", l:"Anemias", t:"Theory"},
+            {q:"What is the characteristic finding in Agranulocytosis?", o:["Low red blood cells only","Marked leukopenia and severe neutropenia","High platelet count","High hemoglobin","Excessive iron storage"], a:1, e:"Agranulocytosis is characterized by marked leukopenia and severe neutropenia.", l:"Anemias", t:"Theory"},
+            {q:"What is the treatment for Aplastic Anemia?", o:["Iron supplementation only","Remove causative agent, stimulate hemopoiesis with anabolic steroids, bone marrow transfusion","Vitamin B12 injections only","Folic acid only","Blood transfusion only"], a:1, e:"Treatment: Remove causative agent, Stimulate hemopoiesis using anabolic steroids, Bone marrow transfusion.", l:"Anemias", t:"Theory"},
+            {q:"What physiological factor stimulates the bone marrow to increase erythrocyte production?", o:["High oxygen levels (Hyperoxia)","Low oxygen levels (Anoxia)","High carbon dioxide levels","Low blood pressure","High blood glucose"], a:1, e:"Anoxia. Low oxygen levels in tissues stimulate the bone marrow to increase erythrocyte production.", l:"Anemias", t:"Theory"},
+            {q:"Which hormone increases metabolic activity in bone marrow to enhance erythrocyte production?", o:["Insulin","Thyroxine","Cortisol","Estrogen","Testosterone"], a:1, e:"Thyroxine: It increases metabolic activity in bone marrow, which enhances erythrocyte production.", l:"Anemias", t:"Theory"},
+            {q:"What is the natural source of Folic Acid according to the text?", o:["Meat and fish only","Yeast, Liver, Fresh green vegetables, Fruits","Dairy products only","Grains and cereals only","Eggs and milk only"], a:1, e:"Natural Sources: Yeast, Liver, Fresh green vegetables, Fruits.", l:"Anemias", t:"Theory"},
+            {q:"What is the natural source of Vitamin B12 according to the text?", o:["Fruits and vegetables","Animal products: Meat, Liver, Fish, Egg yolk","Grains and cereals","Dairy only","Legumes and nuts"], a:1, e:"Natural Sources: Animal products: Meat, Liver, Fish, Egg yolk.", l:"Anemias", t:"Theory"},
+            {q:"What is the treatment for Hemolytic Anemia?", o:["Iron supplementation","Vitamin B12 injections","Remove the causative agent and blood transfusion","Bone marrow transplant","Folic acid only"], a:2, e:"Treatment: Remove the causative agent, Blood transfusion.", l:"Anemias", t:"Theory"},
+            {q:"Which drug is an example of a parenteral iron preparation used IM only?", o:["Ferrous sulfate","Iron dextran","Iron sorbitol citric acid","Cyanocobalamin","Ferrous gluconate"], a:2, e:"Iron sorbitol citric acid: Intramuscular injection only.", l:"Anemias", t:"Theory"},
+            {q:"What is the result of defective DNA synthesis in Megaloblastic Anemia?", o:["Small, pale red blood cells","Large, immature red blood cells (macrocytes) with abnormal nuclei","Fragmented red blood cells","Sickle-shaped red blood cells","Normal red blood cells but low count"], a:1, e:"B12 and Folate deficiency leads to defective DNA synthesis, causing large immature RBCs (macrocytes).", l:"Anemias", t:"Theory"},
+            {q:"What is the treatment for Agranulocytosis?", o:["Iron only","Remove causative agent + Vitamin B12 & Folic acid + Blood transfusion","Immediate chemotherapy","High dose steroids only","IV immunoglobulins only"], a:1, e:"Treatment: Remove causative agent, Administration of Vitamin B12, Folic acid, Blood transfusion.", l:"Anemias", t:"Theory"},
+            {q:"Which condition results from the premature destruction of red blood cells?", o:["Aplastic anemia","Iron deficiency anemia","Hemolytic anemia","Megaloblastic anemia","Pernicious anemia"], a:2, e:"Hemolytic anemia results from premature destruction of red blood cells.", l:"Anemias", t:"Theory"},
+            {q:"What is the role of anabolic steroids in the treatment of Aplastic Anemia?", o:["To increase iron absorption","To stimulate hemopoiesis (blood cell production)","To suppress the immune system","To prevent bleeding","To increase appetite"], a:1, e:"Stimulate hemopoiesis using anabolic steroids.", l:"Anemias", t:"Theory"},
+            {q:"Which of the following is an example of an oral iron preparation?", o:["Iron dextran","Ferrous gluconate","Iron sorbitol citric acid","Cyanocobalamin","Hydroxocobalamin"], a:1, e:"Oral preparations: Ferrous sulfate, Ferrous gluconate.", l:"Anemias", t:"Theory"},
+            {q:"What is the effect of cytotoxic drugs on the bone marrow?", o:["They stimulate RBC production","They have no effect","They cause loss of hemopoietic tissue (Aplastic Anemia)","They increase platelet count","They convert yellow marrow to red marrow"], a:2, e:"Cytotoxic drugs cause loss of hemopoietic tissue (Aplastic Anemia).", l:"Anemias", t:"Theory"},
+            {q:"What is the role of the lymphatic tissue in hematopoiesis?", o:["Production of erythrocytes","Production of platelets","Production of lymphocytes and non-granular leukocytes","Production of granular leukocytes","Production of all blood cells"], a:2, e:"Lymphatic Tissue is responsible for production of Lymphocytes and Non-granular leukocytes.", l:"Anemias", t:"Theory"},
+            {q:"Which dietary factors are essential for RBC formation according to the text?", o:["Carbohydrates and fats only","Proteins, Metals, and Vitamins","Only Vitamin C","Only Iron","Only Folic acid"], a:1, e:"Dietary Factors: Proteins, Metals, Vitamins.", l:"Anemias", t:"Theory"},
+            {q:"What is the specific treatment for a patient with Pernicious Anemia who cannot absorb oral Vitamin B12?", o:["High dose oral iron","Lifelong parenteral (IM) Vitamin B12 (Hydroxocobalamin or Cyanocobalamin)","Folic acid only","Blood transfusion monthly","Corticosteroids"], a:1, e:"If Intrinsic Factor is missing, oral B12 will not be absorbed. IM injections bypass the gut.", l:"Anemias", t:"Theory"},
+            {q:"What is the main adverse effect of oral iron supplementation mentioned in the text?", o:["Diarrhea","Gastrointestinal irritation","Headache","Hypotension","Rash"], a:1, e:"Should be given after meals to reduce gastrointestinal irritation.", l:"Anemias", t:"Theory"},
+
+            // Lecture 4: Local Anesthetics
+            {q:"What is the primary difference between Local Anesthesia and General Anesthesia?", o:["Local causes unconsciousness; General does not","Local causes loss of sensation in a specific area without loss of consciousness; General causes loss of sensation in whole body with unconsciousness","Local is only for surgery; General is only for pain","Local is injected; General is inhaled only","There is no difference"], a:1, e:"Local: Loss of sensation in specific area, NO unconsciousness. General: Loss of sensation in whole body, causes unconsciousness.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which type of local anesthetic administration is applied directly to skin or mucous membranes in the form of gel, cream, or solution?", o:["Infiltration anesthesia","Nerve block anesthesia","Surface (Topical) Anesthesia","Spinal anesthesia","Epidural anesthesia"], a:2, e:"Surface (Topical) Anesthesia: Applied directly on Skin, Mucous membranes. Forms: Gel, Cream, Solution.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which local anesthetic technique is most commonly used in dentistry to numb lower teeth, jaw, lip, and tongue on one side?", o:["Infiltration anesthesia","Inferior Alveolar Nerve Block (IANB)","Spinal anesthesia","Epidural anesthesia","Topical anesthesia"], a:1, e:"Inferior Alveolar Nerve Block (IANB) is the most common dental anesthesia technique.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which of the following is an ESTER local anesthetic?", o:["Lidocaine (Lignocaine)","Bupivacaine","Benzocaine","Ropivacaine","Levobupivacaine"], a:2, e:"Esters: Benzocaine, Procaine, Cocaine.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the primary mechanism of action of local anesthetics?", o:["Activating GABA receptors","Blocking voltage-dependent sodium channels from inside the neuronal cell","Blocking calcium channels","Inhibiting COX enzymes","Activating opioid receptors"], a:1, e:"Local anesthetics act by Blocking voltage-dependent sodium channels from inside the neuronal cell.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Where are Ester local anesthetics metabolized?", o:["In the liver","In the kidneys","In the plasma by pseudocholinesterase enzyme","In the lungs","In the brain"], a:2, e:"Ester Local Anesthetics: Hydrolyzed in plasma by pseudocholinesterase enzyme.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Where are Amide local anesthetics metabolized?", o:["In the plasma","In the liver (microsomal enzymes)","In the kidneys","In the stomach","In the skin"], a:1, e:"Amide Local Anesthetics: Primary site of metabolism is Liver (microsomal enzymes).", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which type of local anesthetic is more likely to cause an allergic reaction and why?", o:["Amides, because they are metabolized in the liver","Esters, because the metabolic byproduct is Para-aminobenzoic acid (PABA)","Amides, because they are synthetic","Esters, because they are natural","Both have equal allergy rates"], a:1, e:"Esters: More liable to allergy. Cause of allergy: Metabolic byproduct: Para-aminobenzoic acid (PABA).", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the effect of most local anesthetics on blood vessels?", o:["Vasoconstriction","Vasodilation","No effect","Increased capillary permeability","Decreased blood flow"], a:1, e:"Most local anesthetics produce Vasodilation.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Why is Adrenaline (Epinephrine) added to local anesthetic solutions?", o:["To increase the rate of absorption","To decrease duration of action","To decrease absorption, increase duration, and decrease systemic toxicity","To increase pain during injection","To color the solution"], a:2, e:"Adrenaline purpose: Decrease absorption, Increase duration, Decrease systemic toxicity.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which local anesthetic technique involves injection into the subarachnoid space below lumbar 2?", o:["Epidural anesthesia","Spinal anesthesia","Infiltration anesthesia","Nerve block anesthesia","Topical anesthesia"], a:1, e:"Spinal Anesthesia: Injection into Subarachnoid space below lumbar 2.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which local anesthetic technique is commonly used for painless labor?", o:["Spinal anesthesia","Inferior Alveolar Nerve Block","Epidural anesthesia","Topical anesthesia","Infiltration anesthesia"], a:2, e:"Epidural Anesthesia: Special use is Painless labor.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the characteristic of Amide local anesthetics regarding duration of action?", o:["Short duration of action","Long duration of action","Ultra-short duration","Variable duration","No duration"], a:1, e:"Amide Local Anesthetics: Long duration of action.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the characteristic of Ester local anesthetics regarding duration of action?", o:["Long duration of action","Short duration of action","Ultra-long duration","No duration","Irreversible duration"], a:1, e:"Ester Local Anesthetics: Short duration of action.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Why is significant liver dysfunction a relative contraindication for Amide local anesthetics?", o:["They are metabolized in the liver and can accumulate to toxic levels","They are excreted unchanged in bile","They cause hepatotoxicity","They are activated by the liver","They have no effect in liver disease"], a:0, e:"Significant liver dysfunction is a relative contraindication for Amides because they are metabolized in the liver.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What happens when local anesthetics cause vasodilation?", o:["Decreased absorption, increased duration","Increased rate of absorption, decreased duration, increased risk of overdose","No change in absorption","Decreased pain relief","Increased vasoconstriction"], a:1, e:"Vasodilation leads to Increased rate of absorption into blood, Decreased duration, Increased risk of overdose.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which of the following is an AMIDE local anesthetic?", o:["Procaine","Cocaine","Benzocaine","Lidocaine (Lignocaine)","Tetracaine"], a:3, e:"Amides: Bupivacaine, Levobupivacaine, Lidocaine (Lignocaine), Ropivacaine.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the primary use of Surface (Topical) Anesthesia?", o:["Major abdominal surgery","Minor surgeries on skin, cornea, nose, mouth","Lower limb surgery","Dental nerve blocks only","Labor pain"], a:1, e:"Surface Anesthesia for minor surgeries on Skin, Piercings, Nose, Mouth, Cornea.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the mechanism of action of local anesthetics at the cellular level?", o:["Stabilization of the cell membrane preventing generation and conduction of nerve impulses","Destruction of the nerve cell","Activation of the nerve cell","Increasing sodium influx","Blocking potassium channels"], a:0, e:"Stabilization of the cell membrane. Preventing generation and conduction of nerve impulses.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which local anesthetic technique is used when general anesthesia is contraindicated for abdomen, pelvis, or leg surgery?", o:["Topical anesthesia","Infiltration anesthesia","Nerve block","Spinal anesthesia","Surface anesthesia"], a:3, e:"Spinal Anesthesia: Uses Abdomen, Pelvis, Legs. Used when General anesthesia is contraindicated.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the advantage of Epidural anesthesia over Spinal anesthesia?", o:["It has a faster onset","Lower risk of side effects","It is always used for dental work","It causes unconsciousness","It is irreversible"], a:1, e:"Epidural Anesthesia Advantages: Lower risk of side effects.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Where is the catheter placed in Epidural anesthesia?", o:["In the subarachnoid space","In the epidural space (outside the dura)","In the muscle","In the vein","In the artery"], a:1, e:"Epidural Anesthesia: Catheter placed in epidural space.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which local anesthetics are known as 'Amides'?", o:["Bupivacaine, Levobupivacaine, Lidocaine, Ropivacaine","Benzocaine, Procaine, Cocaine","Aspirin, Ibuprofen","Morphine, Codeine","Paracetamol, Phenacetin"], a:0, e:"Amides: Bupivacaine, Levobupivacaine, Lidocaine (Lignocaine), Ropivacaine.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the effect of local anesthetics on the central nervous system if absorbed systemically in large doses?", o:["Sedation only","Excitement followed by CNS depression, seizures, and respiratory arrest","No effect","Permanent brain damage","Hallucinations only"], a:1, e:"High plasma levels of LAs can cross the BBB and cause CNS toxicity (excitement, seizures, respiratory arrest).", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which local anesthetic is known to be a potent vasodilator?", o:["Lidocaine","Bupivacaine","Esters (e.g., Procaine)","Ropivacaine","Levobupivacaine"], a:2, e:"Special note: Esters are potent vasodilators.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the clinical significance of local anesthetics crossing the Blood-Brain Barrier?", o:["They can only work on peripheral nerves","They can cause central nervous system toxicity (seizures, respiratory depression)","They cannot be used in dentistry","They are safer than other drugs","They cause only peripheral effects"], a:1, e:"All local anesthetics cross the Blood-brain barrier. This can lead to CNS side effects.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which technique involves injecting local anesthetic around nerve trunks such as the brachial plexus?", o:["Topical anesthesia","Infiltration anesthesia","Nerve Block anesthesia","Spinal anesthesia","Surface anesthesia"], a:2, e:"Nerve Block Anesthesia: Injection around nerve trunk. Examples: Dental nerves, Brachial plexus.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the primary use of Infiltration anesthesia?", o:["Major surgery","Minor surgery by reaching nerve branches and terminals subcutaneously","Eye surgery only","Labor pain","Dental cleaning"], a:1, e:"Infiltration (for minor surgery). Subcutaneous injection to reach nerve branches and terminals.", l:"Local Anesthetics", t:"Theory"},
+            {q:"What is the effect of adding a vasoconstrictor to a local anesthetic on the risk of systemic toxicity?", o:["Increases toxicity","Decreases toxicity (by slowing absorption into the bloodstream)","No effect","Doubles the toxicity","Converts it to a general anesthetic"], a:1, e:"Use of Vasoconstrictors... Purpose: Decrease systemic toxicity.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Which of the following statements about Ester local anesthetics is TRUE?", o:["They have a long duration of action","They are metabolized in the liver","They are less liable to systemic toxicity but more liable to allergy","They are all synthetic","They are never used in dentistry"], a:2, e:"Ester Local Anesthetics: Short duration of action. Less liable to systemic toxicity. More liable to allergy.", l:"Local Anesthetics", t:"Theory"}
+        ];
+
+        // --- DATA: T/F (70 Questions) ---
+        // Options are ["True", "False"]. a=0 is True, a=1 is False.
+        const tfQuestions = [
+            // Lecture 1: NSAIDs (20)
+            {q:"Aspirin is indicated for use in children under 16 years with viral fever to reduce the risk of Reye's syndrome.", o:["True","False"], a:1, e:"Aspirin is contraindicated in children under 16 (UK) or 19 (FDA) due to the risk of Reye's syndrome.", l:"NSAIDs", t:"Theory"},
+            {q:"COX-1 is a constitutive enzyme that helps protect the gastric mucosa by promoting prostaglandin synthesis.", o:["True","False"], a:0, e:"COX-1 is 'Constitutive Physiological' with functions including 'Prevention of peptic ulcer' in the stomach.", l:"NSAIDs", t:"Theory"},
+            {q:"Selective COX-2 inhibitors are preferred for patients with cardiovascular disease because they have a lower risk of thrombosis.", o:["True","False"], a:1, e:"Patient with CVD should AVOID Selective COX-2 inhibitors (e.g. Celecoxib) due to ↑ risk of thrombosis.", l:"NSAIDs", t:"Theory"},
+            {q:"Paracetamol (Acetaminophen) has strong anti-inflammatory effects similar to Ibuprofen.", o:["True","False"], a:1, e:"Paracetamol has 'Minimal / No anti-inflammatory effect' and is 'NOT a true NSAID.'", l:"NSAIDs", t:"Theory"},
+            {q:"Indomethacin is considered the most toxic NSAID and is best used as an anti-rheumatic rather than a simple analgesic.", o:["True","False"], a:0, e:"Indomethacin (Indocid®) is labeled 'Most toxic NSAID' and is 'Best used as: Anti-inflammatory / Anti-rheumatic.'", l:"NSAIDs", t:"Theory"},
+            {q:"Diclofenac is recommended for asthmatic patients because it has additional Lipoxygenase (LOX) inhibiting activity.", o:["True","False"], a:0, e:"Diclofenac has 'Additional action: Lipoxygenase (LOX) inhibition. Recommended in asthmatic patients.'", l:"NSAIDs", t:"Theory"},
+            {q:"Naproxen is 20 times stronger than Aspirin according to the text.", o:["True","False"], a:0, e:"Naproxen (Naprosyn) 20× stronger than Aspirin.", l:"NSAIDs", t:"Theory"},
+            {q:"COX-3 is primarily located in the stomach and kidneys and is responsible for anti-inflammatory effects.", o:["True","False"], a:1, e:"COX-3 (Central). Located in CNS & Heart. Responsible for: Analgesic effect, Antipyretic effect. No anti-inflammatory activity.", l:"NSAIDs", t:"Theory"},
+            {q:"Misoprostol is a Proton Pump Inhibitor (PPI) used to treat NSAID-induced gastric ulcers.", o:["True","False"], a:1, e:"Misoprostol is a 'Synthetic Prostaglandin E analogue' used for prevention of NSAIDs-induced ulcers, not a PPI. PPIs are Omeprazole/Pantoprazole.", l:"NSAIDs", t:"Theory"},
+            {q:"Topical NSAIDs have similar efficacy to oral NSAIDs but with lower systemic side effects.", o:["True","False"], a:0, e:"Topical NSAIDs are preferred due to: Similar efficacy, Lower systemic side effects.", l:"NSAIDs", t:"Theory"},
+            {q:"Chronic use of NSAIDs can lead to a condition called Analgesic Nephropathy.", o:["True","False"], a:0, e:"Analgesic nephropathy occurs 'with chronic or prolonged use' of NSAIDs.", l:"NSAIDs", t:"Theory"},
+            {q:"Paracetamol is safe to use in patients with peptic ulcer disease and in children with viral infections.", o:["True","False"], a:0, e:"Paracetamol is 'Safe in: Pregnancy, Peptic ulcer, Asthma, Children with viral infections.'", l:"NSAIDs", t:"Theory"},
+            {q:"Phenacetin is an active drug that directly inhibits COX enzymes without requiring metabolism.", o:["True","False"], a:1, e:"Phenacetin is a 'Prodrug of Paracetamol.' It requires metabolism to become active.", l:"NSAIDs", t:"Theory"},
+            {q:"Ibuprofen 400 mg is highly effective for postoperative dental pain, especially after surgical procedures.", o:["True","False"], a:0, e:"Ibuprofen 400 mg is highly effective for postoperative dental pain, especially after surgical procedures.", l:"NSAIDs", t:"Theory"},
+            {q:"NSAIDs increase renal blood flow by stimulating prostaglandin-mediated vasodilation.", o:["True","False"], a:1, e:"NSAIDs cause 'Renal vasoconstriction' and decreased RBF by inhibiting vasodilatory prostaglandins.", l:"NSAIDs", t:"Theory"},
+            {q:"Aspirin inhibits COX-1 more than COX-2, which explains its antiplatelet effect at low doses.", o:["True","False"], a:0, e:"Aspirin inhibits COX-1 more than COX-2.", l:"NSAIDs", t:"Theory"},
+            {q:"Ketoprofen is specifically indicated for gingival inflammation and dysmenorrhea.", o:["True","False"], a:0, e:"Ketoprofen is Used for: Arthritis pain, Gingival inflammation, Dysmenorrhea.", l:"NSAIDs", t:"Theory"},
+            {q:"Celecoxib is a non-selective NSAID that causes significant gastrointestinal irritation.", o:["True","False"], a:1, e:"Celecoxib is a 'Selective COX-2 inhibitor' with 'Minimal GIT effects' and 'Less gastric toxicity.'", l:"NSAIDs", t:"Theory"},
+            {q:"The antiplatelet effect of Aspirin lasts for 4-6 hours and is reversible.", o:["True","False"], a:1, e:"Aspirin irreversibly inhibits platelet COX-1 for the lifespan of the platelet (7-10 days).", l:"NSAIDs", t:"Theory"},
+            {q:"NSAIDs should be avoided in late pregnancy due to the risk of premature closure of the fetal ductus arteriosus.", o:["True","False"], a:0, e:"Pregnancy (especially late pregnancy) is listed under 'Contraindications of NSAIDs.'", l:"NSAIDs", t:"Theory"},
+
+            // Lecture 2: Opioids (20)
+            {q:"Morphine acts centrally by depressing the cerebral sensory cortex via opioid receptors.", o:["True","False"], a:0, e:"Narcotic analgesics relieve pain centrally by depressing the cerebral sensory cortex. They act via opioid receptors.", l:"Opioids", t:"Theory"},
+            {q:"Endorphins are exogenous opioids derived from the opium poppy.", o:["True","False"], a:1, e:"Endorphins are Endogenous Opioids (Natural in Body). They are produced naturally, not from opium.", l:"Opioids", t:"Theory"},
+            {q:"The Mu (μ) opioid receptor mediates analgesia, respiratory depression, euphoria, and addiction.", o:["True","False"], a:0, e:"Mu (μ) receptor: Analgesia, miosis, respiratory depression, euphoria, addiction.", l:"Opioids", t:"Theory"},
+            {q:"Tolerance develops to the constipating effects of morphine with chronic use.", o:["True","False"], a:1, e:"Tolerance develops to Analgesia, Respiratory depression, Euphoria, Sedation. BUT NOT to Constipation, Miosis.", l:"Opioids", t:"Theory"},
+            {q:"Naloxone is a competitive antagonist at opioid receptors and reverses respiratory depression caused by morphine.", o:["True","False"], a:0, e:"Naloxone reverses all opioid effects including respiratory depression.", l:"Opioids", t:"Theory"},
+            {q:"Codeine has higher analgesic potency than morphine and is more addictive.", o:["True","False"], a:1, e:"Codeine is 1/10 potency as analgesic and has Less addiction.", l:"Opioids", t:"Theory"},
+            {q:"Fentanyl is 100 times more potent than morphine and has a rapid onset but short duration due to high lipid solubility.", o:["True","False"], a:0, e:"Fentanyl is 100 times more potent than morphine. Rapid onset. Short duration: 15-30 minutes. Reason: High lipid solubility.", l:"Opioids", t:"Theory"},
+            {q:"Fentanyl can be given orally with excellent bioavailability.", o:["True","False"], a:1, e:"Fentanyl should NOT be given orally. Reason: Severe first pass metabolism.", l:"Opioids", t:"Theory"},
+            {q:"Methadone is primarily used for the treatment of opioid addiction because it provides smoother withdrawal.", o:["True","False"], a:0, e:"Methadone Main Therapeutic Uses: Treatment of opioid addiction. Advantage: Gradual withdrawal smoother & less severe.", l:"Opioids", t:"Theory"},
+            {q:"Tramadol has a mixed mechanism including weak Mu agonism and SNRI activity (inhibiting norepinephrine and serotonin reuptake).", o:["True","False"], a:0, e:"Tramadol has Mixed mechanism. Weak Mu agonist. Inhibiting uptake of noradrenaline and serotonin (SNRI activity).", l:"Opioids", t:"Theory"},
+            {q:"Tramadol has a higher risk of respiratory depression compared to morphine.", o:["True","False"], a:1, e:"Tramadol produces less Respiratory depression, Constipation, Addiction. BUT it increases risk of convulsions.", l:"Opioids", t:"Theory"},
+            {q:"Pethidine (Meperidine) has local anesthetic properties and causes less constipation than morphine.", o:["True","False"], a:0, e:"Pethidine: Has local anesthetic effect. Less respiratory depression. Less constipation. Less addiction.", l:"Opioids", t:"Theory"},
+            {q:"Morphine causes mydriasis (dilated pupils) as a common adverse effect.", o:["True","False"], a:1, e:"Adverse effect: Miosis (Pin-point pupil), not mydriasis.", l:"Opioids", t:"Theory"},
+            {q:"Morphine is contraindicated in labor because it crosses the placenta and can cause neonatal asphyxia.", o:["True","False"], a:0, e:"Morphine crosses Placental Barrier during labor → Neonatal asphyxia. Contraindicated in: Labor.", l:"Opioids", t:"Theory"},
+            {q:"Naloxone completely reverses the analgesic effects of Tramadol.", o:["True","False"], a:1, e:"Because tramadol has mixed mechanism, It is only partially antagonized by naloxone.", l:"Opioids", t:"Theory"},
+            {q:"Codeine is a natural phenanthrene opium alkaloid known as methyl-morphine.", o:["True","False"], a:0, e:"Codeine is a Natural phenanthrene opium alkaloid. Methyl-morphine.", l:"Opioids", t:"Theory"},
+            {q:"Morphine causes bronchospasm and is therefore safe for asthmatic patients.", o:["True","False"], a:1, e:"Morphine causes Respiratory depression & bronchospasm, making it unsafe in asthma.", l:"Opioids", t:"Theory"},
+            {q:"Heroin is a fully synthetic opioid.", o:["True","False"], a:1, e:"Heroin is listed under Semisynthetic opioids.", l:"Opioids", t:"Theory"},
+            {q:"Morphine can be used as a pre-anesthetic medication to provide analgesia, amnesia, and sedation.", o:["True","False"], a:0, e:"Use of Morphine: Pre-anesthetic Medication (Analgesia, Amnesia, Sedation).", l:"Opioids", t:"Theory"},
+            {q:"Naloxone has a longer duration of action than most opioids, so a single dose is always sufficient.", o:["True","False"], a:1, e:"Naloxone has a short half-life (~1 hour). Long-acting opioids may outlast the antidote.", l:"Opioids", t:"Theory"},
+
+            // Lecture 3: Anemias (15)
+            {q:"Iron deficiency anemia is the most frequent type of anemia worldwide.", o:["True","False"], a:0, e:"Iron Deficiency Anemia is the most frequent type of anemia worldwide.", l:"Anemias", t:"Theory"},
+            {q:"Pregnancy increases the requirement for iron due to fetal development.", o:["True","False"], a:0, e:"Pregnancy: where the body requires more iron for fetal development.", l:"Anemias", t:"Theory"},
+            {q:"Oral iron preparations should be given on an empty stomach to maximize absorption, regardless of GI irritation.", o:["True","False"], a:1, e:"Should be given after meals to reduce gastrointestinal irritation.", l:"Anemias", t:"Theory"},
+            {q:"Pernicious anemia is caused by a deficiency of intrinsic factor leading to vitamin B12 malabsorption.", o:["True","False"], a:0, e:"Parietal cells fail to produce Intrinsic Factor. Without it, Vitamin B12 cannot be absorbed.", l:"Anemias", t:"Theory"},
+            {q:"Folic acid deficiency causes microcytic anemia similar to iron deficiency.", o:["True","False"], a:1, e:"Folic acid deficiency causes Macrocytic Anemia (Pernicious Anemia) / Megaloblastic Anemia, not microcytic.", l:"Anemias", t:"Theory"},
+            {q:"Aplastic anemia is caused by loss of hemopoietic tissue in the bone marrow due to cytotoxic drugs or radiation.", o:["True","False"], a:0, e:"Aplastic anemia occurs due to loss of hemopoietic tissue. Causes: Cytotoxic drugs, Ionizing radiation.", l:"Anemias", t:"Theory"},
+            {q:"Sulphonamides can cause hemolytic anemia in patients with G6PD deficiency.", o:["True","False"], a:0, e:"Sulphonamides induce hemolysis in individuals with G6PD deficiency.", l:"Anemias", t:"Theory"},
+            {q:"Agranulocytosis is characterized by marked leukocytosis (high white blood cell count).", o:["True","False"], a:1, e:"Agranulocytosis is characterized by: Marked leukopenia (low WBC) and severe neutropenia.", l:"Anemias", t:"Theory"},
+            {q:"Thyroxine increases metabolic activity in bone marrow and enhances erythrocyte production.", o:["True","False"], a:0, e:"Thyroxine: It increases metabolic activity in bone marrow, which enhances erythrocyte production.", l:"Anemias", t:"Theory"},
+            {q:"Anoxia (low oxygen levels) stimulates the bone marrow to decrease erythrocyte production.", o:["True","False"], a:1, e:"Anoxia. Low oxygen levels in tissues stimulate the bone marrow to increase erythrocyte production.", l:"Anemias", t:"Theory"},
+            {q:"Hydroxocobalamin is a Vitamin B12 preparation used for sustained release effect.", o:["True","False"], a:0, e:"Hydroxocobalamin injection is used for sustained release effect.", l:"Anemias", t:"Theory"},
+            {q:"Natural sources of Vitamin B12 include fresh green vegetables and fruits.", o:["True","False"], a:1, e:"Vitamin B12 natural sources are Animal products: Meat, Liver, Fish, Egg yolk. Folic acid is found in vegetables.", l:"Anemias", t:"Theory"},
+            {q:"Anabolic steroids can be used to stimulate hemopoiesis in aplastic anemia.", o:["True","False"], a:0, e:"Treatment: Stimulate hemopoiesis using anabolic steroids.", l:"Anemias", t:"Theory"},
+            {q:"Iron sorbitol citric acid is an oral iron preparation suitable for first-line treatment.", o:["True","False"], a:1, e:"Iron sorbitol citric acid: Intramuscular injection only (parenteral, not oral).", l:"Anemias", t:"Theory"},
+            {q:"The bone marrow is responsible for the production of erythrocytes, platelets, and granular leukocytes.", o:["True","False"], a:0, e:"Bone Marrow is responsible for production of: Erythrocytes, Platelets, Granular leukocytes.", l:"Anemias", t:"Theory"},
+
+            // Lecture 4: Local Anesthetics (15)
+            {q:"Local anesthetics cause loss of sensation in a specific area without causing loss of consciousness.", o:["True","False"], a:0, e:"Local anesthetics: Cause loss of sensation in a specific area. DO NOT cause loss of consciousness.", l:"Local Anesthetics", t:"Theory"},
+            {q:"The Inferior Alveolar Nerve Block (IANB) is the most common dental anesthesia technique.", o:["True","False"], a:0, e:"Inferior Alveolar Nerve Block (IANB) is the most common dental anesthesia technique.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Ester local anesthetics are metabolized in the liver by microsomal enzymes.", o:["True","False"], a:1, e:"Ester Local Anesthetics: Hydrolyzed in plasma by pseudocholinesterase enzyme. Amides are metabolized in the liver.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Amide local anesthetics have a long duration of action and are more liable to systemic toxicity.", o:["True","False"], a:0, e:"Amide Local Anesthetics: Long duration of action. More liable to systemic toxicity.", l:"Local Anesthetics", t:"Theory"},
+            {q:"All local anesthetics cause vasoconstriction, which increases their duration of action.", o:["True","False"], a:1, e:"Most local anesthetics produce: Vasodilation. Esters are potent vasodilators.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Adrenaline (Epinephrine) is added to local anesthetics to decrease absorption, increase duration, and decrease systemic toxicity.", o:["True","False"], a:0, e:"Adrenaline purpose: Decrease absorption, Increase duration, Decrease systemic toxicity.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Spinal anesthesia involves injection into the epidural space and is commonly used for painless labor.", o:["True","False"], a:1, e:"Spinal anesthesia is injected into the subarachnoid space. Epidural anesthesia is used for painless labor.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Ester local anesthetics are more likely to cause allergic reactions due to the metabolite PABA (Para-aminobenzoic acid).", o:["True","False"], a:0, e:"Esters: More liable to allergy. Cause: Metabolic byproduct: Para-aminobenzoic acid (PABA).", l:"Local Anesthetics", t:"Theory"},
+            {q:"Significant liver dysfunction is a relative contraindication for Amide local anesthetics.", o:["True","False"], a:0, e:"Significant liver dysfunction = Relative contraindication for Amide local anesthetics.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Vasodilation caused by local anesthetics decreases the rate of absorption into the bloodstream.", o:["True","False"], a:1, e:"Vasodilation causes Increased rate of absorption into blood and Increased risk of overdose.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Benzocaine, Procaine, and Cocaine are examples of Amide local anesthetics.", o:["True","False"], a:1, e:"Benzocaine, Procaine, and Cocaine are Esters, not Amides.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Lidocaine (Lignocaine), Bupivacaine, and Ropivacaine are examples of Amide local anesthetics.", o:["True","False"], a:0, e:"Lidocaine (Lignocaine), Bupivacaine, and Ropivacaine are listed under Amides.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Epidural anesthesia has a higher risk of side effects compared to spinal anesthesia.", o:["True","False"], a:1, e:"Epidural Anesthesia Advantages: Lower risk of side effects.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Local anesthetics work by blocking voltage-dependent sodium channels from inside the neuronal cell.", o:["True","False"], a:0, e:"Local anesthetics act by: Blocking voltage-dependent sodium channels from inside the neuronal cell.", l:"Local Anesthetics", t:"Theory"},
+            {q:"Surface (Topical) Anesthesia is applied directly to skin or mucous membranes in the form of gel, cream, or solution.", o:["True","False"], a:0, e:"Surface (Topical) Anesthesia: Applied directly on: Skin, Mucous membranes. Forms: Gel, Cream, Solution.", l:"Local Anesthetics", t:"Theory"}
+        ];
+
+        // --- LECTURE CONFIGURATION ---
+        const lecturesConfig = [
+            { id: 1, title: "Lecture 1: NSAIDs & Paracetamol", mcqCount: 50, tfCount: 20 },
+            { id: 2, title: "Lecture 2: Opioids", mcqCount: 50, tfCount: 20 },
+            { id: 3, title: "Lecture 3: Anemias", mcqCount: 30, tfCount: 15 },
+            { id: 4, title: "Lecture 4: Local Anesthetics", mcqCount: 30, tfCount: 15 }
+        ];
+
+        // --- STATE VARIABLES ---
+        let currentMode = null; // 'mcq' or 'tf'
+        let currentLectureId = null;
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let timerInterval;
+        let timeLeft = 60;
+        const TIME_PER_QUESTION = 60;
+
+        // --- INIT ---
+        document.addEventListener("DOMContentLoaded", () => {
+            // Start at Mode Screen
+        });
+
+        // --- UI FUNCTIONS ---
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            document.getElementById('mode-title-display').textContent = mode === 'mcq' ? "Multiple Choice Questions" : "True / False Questions";
+            renderLectureCards();
+            switchView('lecture-screen');
+        }
+
+        function goToModeScreen() {
+            switchView('mode-screen');
+        }
+
+        function goToLectureScreen() {
+            renderLectureCards();
+            switchView('lecture-screen');
+        }
+
+        function goHome() {
+            clearInterval(timerInterval);
+            switchView('mode-screen');
+        }
+
+        function renderLectureCards() {
+            const container = document.getElementById('lectures-container');
+            container.innerHTML = '';
+
+            lecturesConfig.forEach(lec => {
+                const count = currentMode === 'mcq' ? lec.mcqCount : lec.tfCount;
+                const storageKey = `pharmaBoss_${currentMode}_L${lec.id}`;
+                const savedState = JSON.parse(localStorage.getItem(storageKey));
+                
+                let btnText = "Start Quiz";
+                let statusClass = "";
+                let statusText = "";
+
+                if (savedState) {
+                    if (savedState.finished) {
+                        btnText = "Review Results";
+                        statusText = `Completed: ${savedState.score}%`;
+                        statusClass = "completed";
+                    } else {
+                        btnText = "Resume Quiz";
+                        statusText = `Progress: Q${savedState.index + 1}/${count}`;
+                        statusClass = "active";
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = 'lecture-card';
+                card.onclick = () => startLecture(lec.id);
+                card.innerHTML = `
+                    <div class="lecture-info">
+                        <h3>${lec.title}</h3>
+                        <p>${count} Questions</p>
+                    </div>
+                    <div class="lecture-status">
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                        <div style="margin-top:5px; font-size:0.85rem; color:var(--primary-color); font-weight:bold;">${btnText} &rarr;</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- QUIZ LOGIC ---
+
+        function startLecture(id) {
+            currentLectureId = id;
+            const lecConfig = lecturesConfig.find(l => l.id === id);
+            
+            // Slice data based on mode
+            let startIndex = 0;
+            let count = 0;
+            
+            if (currentMode === 'mcq') {
+                // MCQ Offsets: 0, 50, 100, 130
+                if(id===1) { startIndex=0; count=50; }
+                if(id===2) { startIndex=50; count=50; }
+                if(id===3) { startIndex=100; count=30; }
+                if(id===4) { startIndex=130; count=30; }
+                currentQuestions = mcqQuestions.slice(startIndex, startIndex+count);
+            } else {
+                // TF Offsets: 0, 20, 40, 55
+                if(id===1) { startIndex=0; count=20; }
+                if(id===2) { startIndex=20; count=20; }
+                if(id===3) { startIndex=40; count=15; }
+                if(id===4) { startIndex=55; count=15; }
+                currentQuestions = tfQuestions.slice(startIndex, startIndex+count);
+            }
+            
+            // Check for saved state
+            const savedState = JSON.parse(localStorage.getItem(`pharmaBoss_${currentMode}_L${id}`));
+            
+            if (savedState && !savedState.finished) {
+                currentIndex = savedState.index;
+                score = savedState.score;
+            } else {
+                currentIndex = 0;
+                score = 0;
+            }
+
+            if (savedState && savedState.finished) {
+                showResults(savedState.score, savedState.correct, savedState.wrong);
+                return;
+            }
+
+            switchView('quiz-screen');
+            loadQuestion();
+        }
+
+        // Fisher-Yates Shuffle Algorithm
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function loadQuestion() {
+            const q = currentQuestions[currentIndex];
+            document.getElementById('current-lecture-tag').textContent = lecturesConfig.find(l=>l.id===currentLectureId).title;
+            document.getElementById('question-text').textContent = q.q;
+            document.getElementById('q-counter').textContent = `Question ${currentIndex + 1} / ${currentQuestions.length}`;
+            
+            // Progress Bar
+            const percent = ((currentIndex) / currentQuestions.length) * 100;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+
+            // Options
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            // Prepare options to render
+            // We create an array of objects: { text: "Option", originalIndex: 0 }
+            // This allows us to shuffle display but check answers correctly using originalIndex
+            
+            let optionsToRender = [];
+
+            if (currentMode === 'tf') {
+                // True/False: Keep order static
+                q.o.forEach((text, idx) => {
+                    optionsToRender.push({ text, originalIndex: idx });
+                });
+            } else {
+                // MCQ: Randomize order
+                // Map original options to objects with their indices
+                let mappedOptions = q.o.map((text, idx) => ({ text, originalIndex: idx }));
+                // Shuffle the mapped array
+                optionsToRender = shuffleArray(mappedOptions);
+            }
+
+            // Render buttons
+            optionsToRender.forEach(optObj => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = optObj.text;
+                // Pass the original index to the handler
+                btn.onclick = () => handleAnswer(optObj.originalIndex, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            // Reset UI
+            document.getElementById('explanation-box').classList.remove('show');
+            document.getElementById('next-btn').style.display = 'none';
+            
+            // Reset Timer
+            startTimer();
+            saveProgress(); 
+        }
+
+        function handleAnswer(selectedIndex, btnElement) {
+            clearInterval(timerInterval);
+            const q = currentQuestions[currentIndex];
+            const isCorrect = (selectedIndex === q.a);
+            
+            // Disable all buttons
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => b.disabled = true);
+
+            if (isCorrect) {
+                btnElement.classList.add('correct');
+                score++;
+            } else {
+                btnElement.classList.add('wrong');
+                // Highlight correct one (find button by text content or store ref)
+                // Since we shuffled, we can't easily use index. 
+                // We iterate buttons to find the one with the correct text matching q.o[q.a]
+                const correctText = q.o[q.a];
+                buttons.forEach(b => {
+                    if (b.textContent === correctText) {
+                        b.classList.add('correct');
+                    }
+                });
+            }
+
+            // Show Explanation
+            document.getElementById('explanation-text').textContent = q.e;
+            document.getElementById('explanation-box').classList.add('show');
+            document.getElementById('next-btn').style.display = 'inline-flex';
+
+            // Update progress bar to include current step
+            const percent = ((currentIndex + 1) / currentQuestions.length) * 100;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+
+            saveProgress(); 
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < currentQuestions.length) {
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            const total = currentQuestions.length;
+            const wrong = total - score;
+            const percentage = Math.round((score / total) * 100);
+            
+            // Save Finished State
+            const finalState = {
+                finished: true,
+                score: percentage,
+                correct: score,
+                wrong: wrong,
+                index: total
+            };
+            localStorage.setItem(`pharmaBoss_${currentMode}_L${currentLectureId}`, JSON.stringify(finalState));
+            
+            showResults(percentage, score, wrong);
+        }
+
+        function showResults(percentage, correct, wrong) {
+            switchView('result-screen');
+            const title = lecturesConfig.find(l=>l.id===currentLectureId).title;
+            document.getElementById('result-lecture-title').textContent = title + " Completed!";
+            document.getElementById('final-score').textContent = percentage + "%";
+            document.getElementById('final-correct').textContent = correct;
+            document.getElementById('final-wrong').textContent = wrong;
+        }
+
+        function restartCurrentLecture() {
+            localStorage.removeItem(`pharmaBoss_${currentMode}_L${currentLectureId}`);
+            startLecture(currentLectureId);
+        }
+
+        // --- TIMER & SAVE ---
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_PER_QUESTION;
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeUp();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const el = document.getElementById('timer-display');
+            document.getElementById('time-left').textContent = timeLeft;
+            if(timeLeft <= 10) el.classList.add('warning');
+            else el.classList.remove('warning');
+        }
+
+        function handleTimeUp() {
+            const q = currentQuestions[currentIndex];
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => b.disabled = true);
+            
+            // Find correct button by text
+            const correctText = q.o[q.a];
+            buttons.forEach(b => {
+                if (b.textContent === correctText) {
+                    b.classList.add('correct');
+                }
+            });
+            
+            document.getElementById('explanation-text').textContent = "Time's up! " + q.e;
+            document.getElementById('explanation-box').classList.add('show');
+            document.getElementById('next-btn').style.display = 'inline-flex';
+            saveProgress();
+        }
+
+        function saveProgress() {
+            const state = {
+                index: currentIndex,
+                score: score,
+                finished: false
+            };
+            localStorage.setItem(`pharmaBoss_${currentMode}_L${currentLectureId}`, JSON.stringify(state));
+        }
+
+        function clearAllData() {
+            if(confirm("Are you sure you want to reset all quiz progress for both modes? This cannot be undone.")) {
+                localStorage.clear();
+                renderLectureCards();
+                alert("All data has been reset.");
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pharma with Boss - Exam Portal</title>
+    <style>
+        /* --- CSS Variables & Reset --- */
+        :root {
+            --primary-color: #D32F2F; /* Professional Red */
+            --primary-light: #FFEBEE;
+            --secondary-color: #212121;
+            --bg-color: #FFFFFF;
+            --gray-light: #F5F5F5;
+            --success-color: #2E7D32;
+            --error-color: #C62828;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--gray-light);
+            color: var(--secondary-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .brand-name { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px; }
+        .subtitle { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+
+        /* --- Main Layout --- */
+        main {
+            flex: 1;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .view { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Mode Selection Screen --- */
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .mode-card {
+            background: var(--bg-color); padding: 30px; border-radius: var(--border-radius);
+            box-shadow: var(--shadow); border-left: 6px solid var(--primary-color);
+            cursor: pointer; transition: transform 0.2s; text-align: center;
+        }
+        .mode-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .mode-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+        .mode-title { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); margin-bottom: 10px; }
+        .mode-desc { color: #666; font-size: 0.95rem; }
+
+        /* --- Lecture Selection Screen --- */
+        .lectures-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+        .lecture-card {
+            background: var(--bg-color); padding: 20px; border-radius: var(--border-radius);
+            box-shadow: var(--shadow); border-left: 5px solid var(--primary-color);
+            cursor: pointer; transition: transform 0.2s; display: flex; justify-content: space-between; align-items: center;
+        }
+        .lecture-card:hover { transform: translateY(-3px); box-shadow: 0 6px 25px rgba(0,0,0,0.12); }
+        .lecture-info h3 { font-size: 1.1rem; color: #333; margin-bottom: 5px; }
+        .lecture-info p { font-size: 0.9rem; color: #666; }
+        .lecture-status { text-align: right; min-width: 80px; }
+        .status-badge {
+            display: inline-block; padding: 4px 10px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: bold; background: #eee; color: #777;
+        }
+        .status-badge.active { background: var(--primary-light); color: var(--primary-color); border: 1px solid var(--primary-color); }
+
+        /* --- Back Button --- */
+        .back-btn {
+            background: none; border: none; color: #666; font-size: 0.9rem;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;
+        }
+        .back-btn:hover { color: var(--primary-color); }
+
+        /* --- Quiz UI --- */
+        .card { background: var(--bg-color); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow); text-align: center; }
+        
+        .progress-bar-container { background: #e0e0e0; height: 6px; width: 100%; border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: var(--primary-color); width: 0%; transition: width 0.3s ease; }
+
+        .stats-bar { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.9rem; font-weight: 600; color: #666; }
+        
+        .timer-badge {
+            background: var(--primary-light); color: var(--primary-color);
+            padding: 4px 12px; border-radius: 20px; display: flex; align-items: center; gap: 5px;
+        }
+        .timer-badge.warning { background: #ffebee; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .question-card { background: var(--bg-color); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow); margin-bottom: 20px; text-align: left; }
+        
+        .lecture-tag {
+            display: inline-block; background: #eee; color: #333; font-size: 0.75rem;
+            padding: 4px 8px; border-radius: 4px; margin-bottom: 10px; text-transform: uppercase; font-weight: bold;
+        }
+        .question-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; color: #222; }
+
+        .options-list { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn {
+            background: white; border: 2px solid #e0e0e0; padding: 15px; border-radius: 8px;
+            text-align: left; cursor: pointer; font-size: 1rem; transition: all 0.2s; position: relative;
+        }
+        .option-btn:hover:not(:disabled) { border-color: var(--primary-color); background: var(--primary-light); }
+        .option-btn.correct { border-color: var(--success-color); background-color: #e8f5e9; color: var(--success-color); font-weight: 600; }
+        .option-btn.correct::after { content: "✓"; position: absolute; right: 15px; font-weight: bold; }
+        .option-btn.wrong { border-color: var(--error-color); background-color: #ffebee; color: var(--error-color); }
+        .option-btn.wrong::after { content: "✕"; position: absolute; right: 15px; font-weight: bold; }
+        .option-btn:disabled { cursor: default; }
+
+        .explanation-box {
+            margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid var(--primary-color);
+            border-radius: 4px; display: none; animation: slideDown 0.3s ease;
+        }
+        .explanation-box.show { display: block; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Buttons --- */
+        .btn {
+            background-color: var(--primary-color); color: white; border: none; padding: 14px 28px;
+            font-size: 1rem; border-radius: 50px; cursor: pointer; transition: transform 0.2s;
+            font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:hover { background-color: #b71c1c; transform: translateY(-2px); }
+        .btn-secondary { background-color: transparent; border: 2px solid var(--primary-color); color: var(--primary-color); margin-top: 10px; }
+        .btn-secondary:hover { background-color: var(--primary-light); }
+
+        /* --- Result Screen --- */
+        .result-score { font-size: 3rem; font-weight: 800; color: var(--primary-color); margin: 10px 0; }
+        .score-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; text-align: center; }
+        .detail-item { background: #f5f5f5; padding: 10px; border-radius: 8px; }
+        .detail-val { font-weight: bold; display: block; font-size: 1.2rem; }
+
+        footer { text-align: center; padding: 20px; font-size: 0.8rem; color: #888; margin-top: auto; }
+        @media (min-width: 600px) { .lectures-grid { grid-template-columns: 1fr 1fr; } .mode-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-name">Pharma with Boss</div>
+        <div class="subtitle">Professional Pharmacology Exam Platform</div>
+    </header>
+
+    <main>
+        <!-- 1. Mode Selection Screen -->
+        <section id="mode-screen" class="view active">
+            <div style="text-align: center;">
+                <h2 style="color: var(--secondary-color); margin-bottom: 10px;">Welcome to the Exam Portal</h2>
+                <p style="color: #666;">Please select the exam mode you wish to take.</p>
+            </div>
+            
+            <div class="mode-grid">
+                <div class="mode-card" onclick="selectMode('mcq')">
+                    <span class="mode-icon">📝</span>
+                    <div class="mode-title">Multiple Choice</div>
+                    <div class="mode-desc">200 Questions covering all 4 Lectures.</div>
+                </div>
+                <div class="mode-card" onclick="selectMode('tf')">
+                    <span class="mode-icon">✔️</span>
+                    <div class="mode-title">True / False</div>
+                    <div class="mode-desc">120 Questions covering all 4 Lectures.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Lecture Selection Screen -->
+        <section id="lecture-screen" class="view">
+            <button class="back-btn" onclick="goToModeScreen()">&larr; Back to Mode Selection</button>
+            <h2 style="text-align: center; margin-bottom: 20px; color: var(--primary-color);" id="mode-title-display">Select Lecture</h2>
+            
+            <div class="lectures-grid" id="lectures-container">
+                <!-- Cards injected by JS -->
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn btn-secondary" onclick="clearAllData()" style="font-size: 0.8rem; padding: 8px 16px; border:none; color: #999;">Reset All Data</button>
+            </div>
+        </section>
+
+        <!-- 3. Quiz Screen -->
+        <section id="quiz-screen" class="view">
+            <button class="back-btn" onclick="goToLectureScreen()">&larr; Back to Lectures</button>
+            
+            <div class="stats-bar">
+                <span id="q-counter">Question 1</span>
+                <div class="timer-badge" id="timer-display"><span>⏱</span> <span id="time-left">60</span>s</div>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+
+            <div class="question-card">
+                <span class="lecture-tag" id="current-lecture-tag">Lecture 1</span>
+                <div class="question-text" id="question-text">Loading...</div>
+                <div class="options-list" id="options-container"></div>
+                <div class="explanation-box" id="explanation-box">
+                    <span class="explanation-title" style="color:var(--primary-color)">Explanation:</span>
+                    <p id="explanation-text"></p>
+                </div>
+            </div>
+
+            <button class="btn" id="next-btn" onclick="nextQuestion()" style="display:none; margin: 0 auto; width:100%;">Next Question ➜</button>
+        </section>
+
+        <!-- 4. Result Screen -->
+        <section id="result-screen" class="view">
+            <div class="card">
+                <h2 id="result-lecture-title">Lecture Completed!</h2>
+                <p>Here is your performance summary.</p>
+                <div class="result-score" id="final-score">0%</div>
+                <div class="score-details">
+                    <div class="detail-item"><span style="color:#2E7D32">Correct</span><span class="detail-val" id="final-correct">0</span></div>
+                    <div class="detail-item"><span style="color:#C62828">Wrong</span><span class="detail-val" id="final-wrong">0</span></div>
+                </div>
+                <button class="btn" onclick="restartCurrentLecture()">Retake Lecture</button>
+                <button class="btn btn-secondary" onclick="goToLectureScreen()">Back to Lectures</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>&copy; 2026 Pharma with Boss. All Rights Reserved.</footer>
+
+    <script>
+        // --- DATA: MCQ (200 Questions) ---
+
+        // --- LECTURE 1: COAGULATION, THROMBUS VS EMBOLUS, ANTICOAGULANTS ---
+        const mcqQuestionsL1 = [
+            {q:"A thrombus becomes an embolus only when:", o:["It becomes rich in fibrin","It detaches from the vessel wall","It activates factor XII","It converts fibrinogen to fibrin"], a:1, e:"By definition, a thrombus is attached to a vessel wall. Once it detaches and circulates, it becomes an embolus.", l:"Lecture 1", t:"Theory"},
+            {q:"Which feature is unique to a thrombus compared to an embolus?", o:["Can block distant vessels","Contains platelets and fibrin","Forms in a stationary location","Causes tissue hypoxia"], a:2, e:"A thrombus forms in place. An embolus originates from a detached thrombus and is mobile.", l:"Lecture 1", t:"Theory"},
+            {q:"A patient has a blood clot floating in circulation. This is correctly termed:", o:["Thrombus","Embolus","Thrombin","Fibrin mesh"], a:1, e:"Floating clot = mobile = embolus. Stationary attached clot = thrombus.", l:"Lecture 1", t:"Theory"},
+            {q:"Which statement about thrombosis is correct?", o:["It is always beneficial for hemostasis","It refers to clot formation only in veins","It is undesired clot formation inside a blood vessel","It requires tissue factor from damaged endothelium only"], a:2, e:"Thrombosis = pathological (undesired) clot formation inside a vessel. Hemostasis is desired.", l:"Lecture 1", t:"Theory"},
+            {q:"A pulmonary embolism most commonly originates from:", o:["Carotid artery thrombus","Deep vein thrombosis (DVT)","Left atrial thrombus","Coronary artery plaque rupture"], a:1, e:"DVT (usually from legs) detaches → travels to lungs → pulmonary embolism.", l:"Lecture 1", t:"Theory"},
+            {q:"Which of the following is NOT a thrombotic disorder?", o:["Ischemic stroke","Deep vein thrombosis","Hemophilia A","Acute myocardial infarction"], a:2, e:"Hemophilia A is a bleeding disorder (deficiency of factor VIII), not a thrombotic disorder.", l:"Lecture 1", t:"Theory"},
+            {q:"The key danger of both thrombus and embolus is:", o:["Activation of protein C","Increased antithrombin III levels","Occlusion of blood vessels","Enhancement of fibrinolysis"], a:2, e:"Both block vessels → reduced oxygen/nutrients → tissue damage or death.", l:"Lecture 1", t:"Theory"},
+            {q:"A thrombus that forms in an artery is most likely to cause:", o:["Edema of the lower limb","Pulmonary embolism","Ischemic stroke or MI","Varicose veins"], a:2, e:"Arterial thrombosis blocks oxygen supply to organs → stroke (brain) or MI (heart).", l:"Lecture 1", t:"Theory"},
+            {q:"Which treatment directly dissolves an existing thrombus?", o:["Warfarin","Heparin","Fibrinolytics (thrombolytics)","Antiplatelets"], a:2, e:"Fibrinolytics (e.g., tPA) dissolve clots. Anticoagulants and antiplatelets prevent new clots.", l:"Lecture 1", t:"Theory"},
+            {q:"A floating clot that travels from the leg to the lung changes name from:", o:["Embolus to thrombus","Thrombus to embolus","Thrombin to fibrin","Platelet plug to clot"], a:1, e:"Attached = thrombus; after detachment and travel = embolus.", l:"Lecture 1", t:"Theory"},
+            {q:"Which feature is characteristic of venous thrombosis?", o:["High platelet content","Platelet aggregation dominant","Rich in fibrin","Occurs in high-shear vessels"], a:2, e:"Venous thrombi are fibrin-rich due to slow flow and coagulation cascade dominance.", l:"Lecture 1", t:"Theory"},
+            {q:"Arterial thrombosis is primarily treated with:", o:["Anticoagulants alone","Antiplatelet drugs","Vitamin K","Protamine sulfate"], a:1, e:"Arterial clots are platelet-rich → antiplatelets (aspirin, clopidogrel) are first line.", l:"Lecture 1", t:"Theory"},
+            {q:"Which mechanism dominates in venous thrombosis?", o:["Platelet adhesion to collagen","Coagulation cascade activation","von Willebrand factor release","Tissue factor pathway inhibitor blockade"], a:1, e:"Venous thrombi form in low-shear, slow flow → coagulation cascade dominant.", l:"Lecture 1", t:"Theory"},
+            {q:"A clot rich in platelets is most likely found in:", o:["Deep vein of the leg","Pulmonary artery","Coronary artery","Portal vein"], a:2, e:"Arterial thrombi (e.g., coronary artery) are platelet-rich due to high shear stress.", l:"Lecture 1", t:"Theory"},
+            {q:"Which statement about venous thrombosis is FALSE?", o:["It is rich in fibrin","It has low platelet content","It is treated with antiplatelets first","Coagulation cascade is dominant"], a:2, e:"Venous thrombosis is treated with anticoagulants (e.g., heparin, warfarin), not antiplatelets.", l:"Lecture 1", t:"Theory"},
+            {q:"A patient presents with a swollen, painful leg. Which type of clot is most likely?", o:["Platelet-rich arterial thrombus","Fibrin-rich venous thrombus","White thrombus","Atherosclerotic plaque"], a:1, e:"DVT (venous) causes swelling, pain, and is fibrin-rich.", l:"Lecture 1", t:"Theory"},
+            {q:"Which factor is more critical in arterial than venous thrombosis?", o:["Fibrin polymerization","Platelet aggregation","Factor XIII activation","Antithrombin III"], a:1, e:"High shear in arteries makes platelet aggregation dominant.", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug class is preferred for preventing venous thromboembolism post-surgery?", o:["Antiplatelets","Anticoagulants (e.g., LMWH)","Fibrinolytics","Thrombolytics"], a:1, e:"Venous clots are fibrin-rich → anticoagulants are preferred for prevention.", l:"Lecture 1", t:"Theory"},
+            {q:"Which of the following is NOT a feature of arterial thrombosis?", o:["High platelet content","Low fibrin content","Occurs in low-pressure system","Platelet aggregation dominant"], a:2, e:"Arterial thrombosis occurs in high-pressure, high-shear arteries.", l:"Lecture 1", t:"Theory"},
+            {q:"A patient with atrial fibrillation is at risk for which type of clot?", o:["Venous thrombus","Platelet-rich arterial thrombus","Fibrin-rich cardiac chamber thrombus (sometimes mixed)","Only microthrombi"], a:2, e:"AFib leads to stasis in atria → fibrin-rich clots → anticoagulants.", l:"Lecture 1", t:"Theory"},
+            {q:"Which factor directly activates the intrinsic pathway?", o:["Tissue factor (Factor III)","Factor VII","Factor XII","Thrombin"], a:2, e:"Intrinsic pathway is triggered by factor XII activation (contact activation).", l:"Lecture 1", t:"Theory"},
+            {q:"The extrinsic pathway is triggered by:", o:["Factor XII activation","Platelet factor 3","Tissue factor from damaged tissue","High molecular weight kininogen"], a:2, e:"Extrinsic pathway = tissue factor (Factor III) + Factor VII.", l:"Lecture 1", t:"Theory"},
+            {q:"Both intrinsic and extrinsic pathways converge at:", o:["Factor XII","Factor XI","Activation of thrombin (Factor IIa)","Factor IX"], a:2, e:"Final common pathway produces thrombin which converts fibrinogen → fibrin.", l:"Lecture 1", t:"Theory"},
+            {q:"Which enzyme converts fibrinogen to fibrin?", o:["Factor Xa","Thrombin (Factor IIa)","Plasmin","Factor XIIIa"], a:1, e:"Thrombin (IIa) cleaves fibrinogen to fibrin monomers.", l:"Lecture 1", t:"Theory"},
+            {q:"Antithrombin III (ATIII) is produced by:", o:["Endothelial cells","Platelets","Liver","Kidneys"], a:2, e:"ATIII is synthesized in the liver.", l:"Lecture 1", t:"Theory"},
+            {q:"Heparin enhances ATIII activity against which factors? (Select the most complete)", o:["Only Factor Xa","Only Thrombin (IIa)","IIa and Xa","Only Factor IXa"], a:2, e:"Heparin-ATIII complex inhibits both thrombin (IIa) and Factor Xa.", l:"Lecture 1", t:"Theory"},
+            {q:"Which natural anticoagulant is boosted by heparin?", o:["Protein C","Protein S","Antithrombin III","Tissue factor pathway inhibitor"], a:2, e:"Heparin binds to ATIII and increases its activity many folds.", l:"Lecture 1", t:"Theory"},
+            {q:"In the intrinsic pathway, factor XI is activated by:", o:["Factor VIIa","Factor XIIa","Thrombin","Tissue factor"], a:1, e:"XIIa activates XI in the intrinsic pathway.", l:"Lecture 1", t:"Theory"},
+            {q:"Factor XIIIa functions to:", o:["Convert fibrinogen to fibrin","Cross-link fibrin strands","Activate platelets","Inhibit plasmin"], a:1, e:"XIIIa stabilizes the clot by cross-linking fibrin.", l:"Lecture 1", t:"Theory"},
+            {q:"Which of the following is NOT inhibited by the heparin-ATIII complex?", o:["Thrombin (IIa)","Factor Xa","Factor VIIa","Factor XIIa"], a:2, e:"Heparin-ATIII inhibits IIa, Xa, IXa, XIa, XIIa, but VIIa is relatively resistant.", l:"Lecture 1", t:"Theory"},
+            {q:"Why is unfractionated heparin not absorbed orally?", o:["It is degraded by trypsin","It is precipitated by gastric HCl and has large negative charge","It is destroyed by bile salts","It requires vitamin K for absorption"], a:1, e:"Heparin is a large, highly negative polysaccharide precipitated by gastric acid.", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug crosses the placenta and is teratogenic?", o:["Unfractionated heparin","Low molecular weight heparin","Warfarin","Fondaparinux"], a:2, e:"Warfarin crosses placenta → teratogenic (fetal warfarin syndrome). Heparins do not.", l:"Lecture 1", t:"Theory"},
+            {q:"The antidote for heparin overdose is:", o:["Vitamin K","Fresh frozen plasma","Protamine sulfate","Tranexamic acid"], a:2, e:"Protamine sulfate (positively charged) neutralizes heparin (negatively charged).", l:"Lecture 1", t:"Theory"},
+            {q:"Which anticoagulant has a duration of action of approximately 7 days?", o:["Heparin","Enoxaparin (LMWH)","Warfarin","Argatroban"], a:2, e:"Warfarin has a prolonged duration (~7 days) due to long half-life of clotting factors.", l:"Lecture 1", t:"Theory"},
+            {q:"Heparin is the drug of choice in pregnancy because:", o:["It is oral and convenient","It does not cross the placenta","It has no adverse effects","It is a vitamin K antagonist"], a:1, e:"Heparin does not cross placenta, so no teratogenic risk.", l:"Lecture 1", t:"Theory"},
+            {q:"Which laboratory monitoring is required for warfarin therapy?", o:["aPTT","Platelet count","INR (PT)","Anti-Xa assay"], a:2, e:"Warfarin affects PT/INR. Heparin affects aPTT.", l:"Lecture 1", t:"Theory"},
+            {q:"Which statement about warfarin is TRUE?", o:["It has rapid onset of action","It is a direct thrombin inhibitor","It inhibits synthesis of factors II, VII, IX, X","It is safe in pregnancy"], a:2, e:"Warfarin is a vitamin K antagonist → inhibits synthesis of II, VII, IX, X.", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug is a direct thrombin inhibitor?", o:["Heparin","Warfarin","Dabigatran","Fondaparinux"], a:2, e:"Dabigatran directly inhibits thrombin (IIa). Heparin is indirect via ATIII.", l:"Lecture 1", t:"Theory"},
+            {q:"A patient on warfarin needs emergency surgery. Which reversal agent works fastest?", o:["Protamine sulfate","Vitamin K (oral)","Fresh frozen plasma (FFP)","Aminocaproic acid"], a:2, e:"FFP provides immediate clotting factors. IV vitamin K takes hours.", l:"Lecture 1", t:"Theory"},
+            {q:"Which adverse effect is unique to heparin compared to warfarin?", o:["Bleeding","Teratogenicity","Heparin-induced thrombocytopenia (HIT)","Skin necrosis"], a:2, e:"HIT is specific to heparin. Warfarin causes skin necrosis (rare, different mechanism).", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug enhances antithrombin III to inhibit factor Xa more than thrombin?", o:["Unfractionated heparin","Low molecular weight heparin (LMWH)","Warfarin","Dabigatran"], a:1, e:"LMWH has higher anti-Xa:anti-IIa ratio than UFH.", l:"Lecture 1", t:"Theory"},
+            {q:"Osteoporosis with long-term use is associated with:", o:["Warfarin","Heparin","Aspirin","Clopidogrel"], a:1, e:"Long-term heparin use can cause osteoporosis.", l:"Lecture 1", t:"Theory"},
+            {q:"Which anticoagulant is a synthetic pentasaccharide that inhibits only factor Xa via ATIII?", o:["Enoxaparin","Heparin","Fondaparinux","Argatroban"], a:2, e:"Fondaparinux is synthetic, selective anti-Xa via ATIII.", l:"Lecture 1", t:"Theory"},
+            {q:"A patient with HIT (heparin-induced thrombocytopenia) should receive:", o:["More heparin","Warfarin immediately","Direct thrombin inhibitor (e.g., argatroban)","Protamine sulfate"], a:2, e:"Argatroban (direct thrombin inhibitor) is used in HIT. Warfarin is contraindicated initially.", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug has a narrow therapeutic index and requires frequent INR monitoring?", o:["Heparin","Enoxaparin","Warfarin","Dabigatran"], a:2, e:"Warfarin has narrow therapeutic index due to genetic and dietary interactions.", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug is a natural polysaccharide obtained from animal lungs?", o:["Warfarin","Heparin","Dabigatran","Rivaroxaban"], a:1, e:"Heparin is extracted from bovine lung or porcine intestine.", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug is safe to use in pregnancy for DVT treatment?", o:["Warfarin","Dabigatran","Unfractionated heparin or LMWH","Rivaroxaban"], a:2, e:"Heparins do not cross placenta. Warfarin and DOACs are not safe.", l:"Lecture 1", t:"Theory"},
+            {q:"A patient presents with bleeding from warfarin. Which is NOT appropriate?", o:["Vitamin K","Fresh frozen plasma","Protamine sulfate","Prothrombin complex concentrate"], a:2, e:"Protamine sulfate reverses heparin, not warfarin.", l:"Lecture 1", t:"Theory"},
+            {q:"Which factor’s synthesis is inhibited by warfarin but has the shortest half-life?", o:["Factor II","Factor VII","Factor IX","Factor X"], a:1, e:"Factor VII has the shortest half-life (~6 hours), so PT rises quickly.", l:"Lecture 1", t:"Theory"},
+            {q:"Which drug is given subcutaneously, has predictable response, and does not require monitoring?", o:["Unfractionated heparin","LMWH (e.g., enoxaparin)","Warfarin","Argatroban"], a:1, e:"LMWH has predictable pharmacokinetics, SC administration, no routine monitoring.", l:"Lecture 1", t:"Theory"}
+        ];
+
+        // --- LECTURE 2: THROMBOLYTICS, ANTI-FIBRINOLYTICS, ANTIPLATELET ---
+        const mcqQuestionsL2 = [
+            {q:"Which of the following best describes the final common action of all thrombolytic agents?", o:["Directly hydrolyzing fibrin strands","Activating plasminogen to form plasmin","Inhibiting factor XIII cross-linking","Blocking plasminogen activator inhibitor-1"], a:1, e:"All thrombolytics convert inactive plasminogen to active plasmin, which then hydrolyzes fibrin.", l:"Lecture 2", t:"Theory"},
+            {q:"Which thrombolytic agent is most likely to cause a generalized systemic fibrinolytic state?", o:["Alteplase","Reteplase","Streptokinase","Tenecteplase"], a:2, e:"Streptokinase and urokinase cause systemic fibrinolysis. Alteplase and reteplase are more fibrin-specific.", l:"Lecture 2", t:"Theory"},
+            {q:"Why cannot thrombolytic agents be taken orally?", o:["They are antagonized by gastric vitamin K","They are enzymes or proteins and would be digested","They require intravenous protamine for activation","They bind to food proteins irreversibly"], a:1, e:"Thrombolytics are proteins/enzymes; oral administration leads to proteolytic degradation in the GI tract.", l:"Lecture 2", t:"Theory"},
+            {q:"Which statement correctly distinguishes alteplase from streptokinase?", o:["Alteplase is non-antigenic, streptokinase is antigenic","Alteplase causes more systemic bleeding","Streptokinase is fibrin-specific","Alteplase is derived from bacteria"], a:0, e:"Streptokinase is bacterial in origin and antigenic (allergy risk). Alteplase is recombinant human tPA, less antigenic.", l:"Lecture 2", t:"Theory"},
+            {q:"Plasmin, once formed from plasminogen, directly acts on:", o:["Thrombin","Fibrin","Factor X","Platelet ADP receptors"], a:1, e:"Plasmin hydrolyzes fibrin, leading to clot dissolution and fibrin degradation products.", l:"Lecture 2", t:"Theory"},
+            {q:"Which thrombolytic agent is considered naturally occurring (not recombinant) but still causes systemic fibrinolysis?", o:["Alteplase","Reteplase","Urokinase","Tenecteplase"], a:2, e:"Urokinase is naturally derived (from urine or cultured kidney cells) and causes systemic fibrinolysis.", l:"Lecture 2", t:"Theory"},
+            {q:"The conversion of plasminogen to plasmin is catalyzed by:", o:["Thrombin","Factor XIIIa","Thrombolytic agents (via activation)","Antithrombin III"], a:2, e:"Thrombolytics act as plasminogen activators. They do not directly become plasmin.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient with an acute ischemic stroke receives alteplase. Which property makes alteplase preferred over streptokinase in this setting?", o:["Longer half-life","Oral availability","Fibrin-specific action (less systemic bleeding)","No need for IV infusion"], a:2, e:"Alteplase (tPA) is fibrin-specific → acts locally on thrombus → less systemic bleeding risk.", l:"Lecture 2", t:"Theory"},
+            {q:"Which of the following statements about plasmin is FALSE?", o:["It is an endogenous fibrinolytic enzyme","It promotes clot breakdown","It is inhibited by aminocaproic acid","It directly activates factor XIII"], a:3, e:"Plasmin degrades fibrin. It does not activate factor XIII (XIIIa stabilizes clots).", l:"Lecture 2", t:"Theory"},
+            {q:"All thrombolytics must be administered via:", o:["Oral route","Subcutaneous injection","Intravenous infusion","Intramuscular depot"], a:2, e:"Thrombolytics are proteins/enzymes given IV (bolus or infusion). Not absorbed orally.", l:"Lecture 2", t:"Theory"},
+            {q:"Which is an emergency indication for thrombolytic therapy?", o:["Chronic DVT with mild swelling","Stable angina","Multiple pulmonary emboli","Atrial fibrillation without clot"], a:2, e:"Thrombolytics are for emergency treatment of coronary artery thrombosis and multiple pulmonary emboli.", l:"Lecture 2", t:"Theory"},
+            {q:"Which adverse effect is LESS common with alteplase compared to streptokinase?", o:["Hypersensitivity","Bleeding","Nausea","Fever"], a:0, e:"Streptokinase is antigenic (bacterial origin) → higher risk of allergy. Alteplase is recombinant human.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient develops bleeding after streptokinase administration. Which mechanism explains this?", o:["Platelet destruction","Systemic fibrinolytic state","Vitamin K deficiency","Heparin rebound"], a:1, e:"Streptokinase causes systemic plasmin activation → degrades fibrinogen and fibrin throughout body → bleeding.", l:"Lecture 2", t:"Theory"},
+            {q:"Which thrombolytic is most likely to cause an allergic reaction, especially with repeated use?", o:["Alteplase","Reteplase","Streptokinase","Tenecteplase"], a:2, e:"Streptokinase is derived from Streptococcus → antibodies form → allergy and resistance.", l:"Lecture 2", t:"Theory"},
+            {q:"The high cost of recombinant specific tissue plasminogen activators is due to:", o:["Animal source scarcity","Complex biotechnological production","Short shelf life","Import taxes only"], a:1, e:"Alteplase and reteplase are produced by recombinant DNA technology → expensive.", l:"Lecture 2", t:"Theory"},
+            {q:"Which is NOT a clinical use of thrombolytics?", o:["Emergency treatment of coronary artery thrombosis","Multiple pulmonary emboli","Long-term prevention of DVT","Acute ischemic stroke"], a:2, e:"Thrombolytics are acute emergency drugs, not for long-term prevention (anticoagulants are used).", l:"Lecture 2", t:"Theory"},
+            {q:"Which statement correctly compares urokinase and alteplase?", o:["Both are equally fibrin-specific","Urokinase causes more systemic bleeding","Alteplase is derived from bacteria","Urokinase is recombinant"], a:1, e:"Urokinase is non-specific → systemic fibrinolysis → more bleeding than alteplase.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient with massive PE receives thrombolytics. The desired therapeutic effect is:", o:["Prevention of new clot formation","Dissolution of existing pulmonary emboli","Inhibition of platelet aggregation","Enhancement of antithrombin III"], a:1, e:"Thrombolytics dissolve existing clots (emboli). Anticoagulants prevent new clots.", l:"Lecture 2", t:"Theory"},
+            {q:"Which thrombolytic is NOT recombinant and is derived from human urine or cultured kidney cells?", o:["Alteplase","Reteplase","Tenecteplase","Urokinase"], a:3, e:"Urokinase is naturally derived, not recombinant.", l:"Lecture 2", t:"Theory"},
+            {q:"Which adverse effect is shared by all thrombolytics regardless of specificity?", o:["Severe neutropenia","Hepatotoxicity","Bleeding","Nephrotoxicity"], a:2, e:"All thrombolytics increase bleeding risk (though less with fibrin-specific agents).", l:"Lecture 2", t:"Theory"},
+            {q:"Aminocaproic acid exerts its anti-fibrinolytic effect by:", o:["Activating plasmin","Inhibiting activation of plasminogen to plasmin","Enhancing factor XIII","Blocking fibrinogen receptors"], a:1, e:"Aminocaproic acid and tranexamic acid inhibit plasminogen activation → prevent plasmin formation.", l:"Lecture 2", t:"Theory"},
+            {q:"Which clinical scenario is an appropriate use of tranexamic acid?", o:["Acute coronary thrombosis","Bleeding caused by thrombolytic toxicity","Deep vein thrombosis prophylaxis","Stroke prevention in atrial fibrillation"], a:1, e:"Anti-fibrinolytics reverse bleeding from thrombolytics or in hemophilia, not for thrombotic conditions.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient with hemophilia A experiences prolonged bleeding. Which anti-fibrinolytic may be useful?", o:["Streptokinase","Alteplase","Aminocaproic acid","Clopidogrel"], a:2, e:"Aminocaproic acid is used in some bleeding disorders (e.g., hemophilia) to stabilize clots.", l:"Lecture 2", t:"Theory"},
+            {q:"Which surgery is associated with bleeding risk where tranexamic acid is used prophylactically?", o:["Brain surgery","Prostate surgery","Cardiac bypass","Skin graft"], a:1, e:"Prostate surgery and lung surgery (tissue plasminogen activators) → anti-fibrinolytics prevent bleeding.", l:"Lecture 2", t:"Theory"},
+            {q:"Which statement about anti-fibrinolytics is FALSE?", o:["They inhibit plasminogen activation","They are used for menorrhagia","They enhance the effect of thrombolytics","They are contraindicated in DVT"], a:2, e:"Anti-fibrinolytics oppose thrombolytics, not enhance them.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient develops bleeding after streptokinase. Which drug is most appropriate?", o:["Aspirin","Clopidogrel","Tranexamic acid","Heparin"], a:2, e:"Anti-fibrinolytics (tranexamic acid, aminocaproic acid) reverse thrombolytic-induced bleeding.", l:"Lecture 2", t:"Theory"},
+            {q:"Which condition is NOT a therapeutic use of anti-fibrinolytics?", o:["Menorrhagia","Bleeding in hemophilia","Pulmonary embolism","Post-prostatectomy bleeding"], a:2, e:"Pulmonary embolism is a thrombotic emergency treated with thrombolytics, not anti-fibrinolytics.", l:"Lecture 2", t:"Theory"},
+            {q:"The mechanism of tranexamic acid involves:", o:["Irreversible COX-1 inhibition","Inhibition of plasminogen activation","Direct thrombin inhibition","Antithrombin III activation"], a:1, e:"Both aminocaproic acid and tranexamic acid inhibit plasminogen → plasmin conversion.", l:"Lecture 2", t:"Theory"},
+            {q:"Which drug would be contraindicated in a patient with a recent DVT?", o:["Heparin","Warfarin","Tranexamic acid","Aspirin"], a:2, e:"Anti-fibrinolytics prevent clot breakdown → dangerous in DVT (risk of extension).", l:"Lecture 2", t:"Theory"},
+            {q:"Aminocaproic acid is useful in bleeding caused by:", o:["Warfarin overdose","Heparin overdose","Fibrinolytic drug toxicity","Aspirin overdose"], a:2, e:"Anti-fibrinolytics specifically reverse fibrinolytics. Warfarin needs vitamin K/FFP; heparin needs protamine.", l:"Lecture 2", t:"Theory"},
+            {q:"Platelet aggregation is centrally important in clots forming in:", o:["Deep veins of the leg","Arterial circulation","Portal vein","Sinusoids of liver"], a:1, e:"Arterial circulation (high shear) → platelet aggregation dominant.", l:"Lecture 2", t:"Theory"},
+            {q:"Which substance is a potent stimulator of platelet aggregation synthesized via COX-1?", o:["Prostacyclin (PGI2)","Thromboxane A2 (TXA2)","Nitric oxide","ADP"], a:1, e:"TXA2 is a potent platelet aggregator. Aspirin inhibits its synthesis.", l:"Lecture 2", t:"Theory"},
+            {q:"Aspirin inhibits platelet aggregation by blocking:", o:["ADP receptors","Glycoprotein IIb/IIIa receptors","Cyclooxygenase-1 (COX-1)","Phosphodiesterase"], a:2, e:"Aspirin irreversibly acetylates COX-1 → prevents TXA2 synthesis.", l:"Lecture 2", t:"Theory"},
+            {q:"Which drug irreversibly inhibits the ADP receptor on platelets?", o:["Aspirin","Ibuprofen","Clopidogrel","Tranexamic acid"], a:2, e:"Clopidogrel and ticlopidine are irreversible ADP receptor (P2Y12) inhibitors.", l:"Lecture 2", t:"Theory"},
+            {q:"Which statement correctly differentiates aspirin from clopidogrel?", o:["Aspirin inhibits COX-1; clopidogrel inhibits ADP receptors","Both have identical mechanisms","Aspirin is irreversible; clopidogrel is reversible","Clopidogrel inhibits TXA2 synthesis"], a:0, e:"Aspirin = COX-1 → TXA2 ↓. Clopidogrel = P2Y12 ADP receptor → ADP-mediated aggregation ↓.", l:"Lecture 2", t:"Theory"},
+            {q:"Thromboxane A2 (TXA2) is synthesized from arachidonic acid via:", o:["Lipoxygenase","Cyclooxygenase-1 (COX-1)","Phospholipase A2","Thrombin"], a:1, e:"COX-1 converts arachidonic acid to TXA2 in platelets.", l:"Lecture 2", t:"Theory"},
+            {q:"Which antiplatelet drug causes severe neutropenia in approximately 1% of patients?", o:["Aspirin","Clopidogrel","Ticlopidine","Prasugrel"], a:2, e:"Ticlopidine has a 1% risk of severe neutropenia. Clopidogrel has lower hematologic risk.", l:"Lecture 2", t:"Theory"},
+            {q:"Which adverse effect is common to aspirin but NOT to clopidogrel?", o:["Bleeding","GI irritation/ulceration","Thrombocytopenia","Neutropenia"], a:1, e:"Aspirin causes direct GI mucosal damage + COX-1 inhibition. Clopidogrel causes less GI toxicity.", l:"Lecture 2", t:"Theory"},
+            {q:"ADP-mediated platelet aggregation is inhibited by:", o:["Aspirin","Dipyridamole","Clopidogrel","Aminocaproic acid"], a:2, e:"Clopidogrel blocks P2Y12 ADP receptors → prevents ADP-induced aggregation.", l:"Lecture 2", t:"Theory"},
+            {q:"Which drug class significantly enhances the effects of other anticlotting agents as a common unwanted effect?", o:["Only anticoagulants","Only thrombolytics","All antiplatelet drugs","Only anti-fibrinolytics"], a:2, e:"All antiplatelet drugs enhance effects of anticoagulants/thrombolytics → increased bleeding risk.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient on clopidogrel develops bleeding. Which lab finding is expected?", o:["Prolonged PT","Prolonged aPTT","Prolonged bleeding time","Elevated INR"], a:2, e:"Antiplatelets affect platelet function → prolonged bleeding time. PT/aPTT unaffected.", l:"Lecture 2", t:"Theory"},
+            {q:"Which statement about ticlopidine is TRUE?", o:["It has no effect on ADP receptors","It causes less neutropenia than clopidogrel","It causes severe neutropenia (~1%)","It is a COX-1 inhibitor"], a:2, e:"Ticlopidine causes severe neutropenia (~1%) and is now less used than clopidogrel.", l:"Lecture 2", t:"Theory"},
+            {q:"Aspirin’s antiplatelet effect lasts for the lifespan of the platelet because:", o:["It is rapidly metabolized","It irreversibly inhibits COX-1","It has a long plasma half-life","It accumulates in platelets"], a:1, e:"Aspirin irreversibly acetylates COX-1; platelet cannot synthesize new enzyme → effect for 7–10 days.", l:"Lecture 2", t:"Theory"},
+            {q:"Which antiplatelet drug is used in combination with aspirin for dual antiplatelet therapy (DAPT) after stent placement?", o:["Warfarin","Clopidogrel","Heparin","Tranexamic acid"], a:1, e:"DAPT = aspirin + P2Y12 inhibitor (clopidogrel, prasugrel, ticlopidine).", l:"Lecture 2", t:"Theory"},
+            {q:"Which is NOT an antiplatelet drug?", o:["Aspirin","Clopidogrel","Ticlopidine","Aminocaproic acid"], a:3, e:"Aminocaproic acid is an anti-fibrinolytic, not antiplatelet.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient with aspirin allergy needs antiplatelet therapy. Which is an appropriate alternative?", o:["Warfarin","Clopidogrel","Heparin","Urokinase"], a:1, e:"Clopidogrel (ADP receptor inhibitor) works via different mechanism; no cross-allergy.", l:"Lecture 2", t:"Theory"},
+            {q:"Which statement about thromboxane A2 is FALSE?", o:["It is a potent vasoconstrictor","It promotes platelet aggregation","Its synthesis is inhibited by clopidogrel","It is produced via COX-1"], a:2, e:"Clopidogrel inhibits ADP receptors, not TXA2 synthesis. Aspirin inhibits TXA2.", l:"Lecture 2", t:"Theory"},
+            {q:"Bleeding occurs in up to 5% of patients on clopidogrel. This is due to:", o:["Thrombocytopenia","Impaired platelet aggregation","Coagulation factor deficiency","Fibrinolysis activation"], a:1, e:"Clopidogrel inhibits ADP-mediated platelet aggregation → bleeding risk (~5%).", l:"Lecture 2", t:"Theory"},
+            {q:"Which antiplatelet drug is associated with severe neutropenia as a dose-independent adverse effect?", o:["Aspirin","Clopidogrel","Ticlopidine","Prasugrel"], a:2, e:"Ticlopidine causes severe neutropenia (~1%), requiring CBC monitoring.", l:"Lecture 2", t:"Theory"},
+            {q:"A patient on dual antiplatelet therapy (aspirin + clopidogrel) requires surgery. The major risk is:", o:["Thrombosis","Bleeding","Infection","Neutropenia"], a:1, e:"Antiplatelet drugs increase bleeding risk; often stopped before surgery if possible.", l:"Lecture 2", t:"Theory"}
+        ];
+
+        // --- LECTURE 3: DIABETES & ANTIDIABETIC DRUGS ---
+        const mcqQuestionsL3 = [
+            {q:"A patient presents with random blood glucose of 220 mg/dL accompanied by polyuria and polydipsia. According to diagnostic criteria, this indicates:", o:["Normal glucose tolerance","Prediabetes","Diabetes mellitus","Impaired fasting glucose"], a:2, e:"Random glucose ≥200 mg/dL with classic symptoms (polyuria, polydipsia, polyphagia) is diagnostic for diabetes.", l:"Lecture 3", t:"Theory"},
+            {q:"Which test result is diagnostic for diabetes mellitus?", o:["Fasting glucose 110 mg/dL","2-hour OGTT 150 mg/dL","Fasting glucose 130 mg/dL","HbA1c 6.0%"], a:2, e:"Fasting glucose ≥126 mg/dL is diagnostic. 110 mg/dL = impaired fasting; 150 mg/dL = impaired glucose tolerance; HbA1c 6.0% = prediabetes range.", l:"Lecture 3", t:"Theory"},
+            {q:"A patient has fasting glucose 115 mg/dL and 2-hour OGTT 160 mg/dL. This is classified as:", o:["Normal","Diabetes mellitus","Prediabetes","Gestational diabetes only"], a:2, e:"Fasting 100-125 mg/dL + OGTT 140-199 mg/dL = prediabetes (impaired glucose regulation).", l:"Lecture 3", t:"Theory"},
+            {q:"Which feature distinguishes diabetes insipidus from diabetes mellitus?", o:["Presence of glucose in urine","Presence of polyuria","Presence of polydipsia","Elevated blood glucose"], a:0, e:"Diabetes mellitus has glucosuria (sweet urine). Diabetes insipidus has tasteless urine with no glucose.", l:"Lecture 3", t:"Theory"},
+            {q:"The underlying hormone deficiency in diabetes insipidus is:", o:["Insulin","Glucagon","ADH (vasopressin)","Cortisol"], a:2, e:"Diabetes insipidus = ADH deficiency/resistance. Diabetes mellitus = insulin deficiency/resistance.", l:"Lecture 3", t:"Theory"},
+            {q:"Polyuria in diabetes mellitus results from:", o:["Failure of water reabsorption due to ADH deficiency","Osmotic diuresis caused by glucosuria","Increased water intake","Reduced glomerular filtration"], a:1, e:"High blood glucose → glucose spills into urine → osmotic diuresis → polyuria.", l:"Lecture 3", t:"Theory"},
+            {q:"Which symptom triad is classic for untreated diabetes mellitus?", o:["Polyuria, polydipsia, polyphagia","Polyuria, weight gain, hypertension","Polydipsia, bradycardia, fatigue","Polyphagia, blurred vision, bradycardia"], a:0, e:"The three Ps: polyuria, polydipsia, polyphagia.", l:"Lecture 3", t:"Theory"},
+            {q:"A patient with type 1 diabetes mellitus requires insulin daily because:", o:["Their cells are resistant to insulin","Their pancreas produces little or no insulin due to β-cell destruction","They have glucocorticoid excess","They have ADH deficiency"], a:1, e:"Type 1 = autoimmune destruction of β-cells → absolute insulin deficiency → insulin required for survival.", l:"Lecture 3", t:"Theory"},
+            {q:"Which statement about gestational diabetes mellitus is TRUE?", o:["It always requires insulin permanently","It typically resolves after delivery but increases future type 2 diabetes risk","It only occurs in type 1 diabetics","It is diagnosed by fasting glucose <100 mg/dL"], a:1, e:"Gestational diabetes resolves postpartum but increases risk of type 2 diabetes later.", l:"Lecture 3", t:"Theory"},
+            {q:"A patient with type 2 diabetes is most likely to have:", o:["Absolute insulin deficiency","Insulin resistance with relative insulin deficiency","Autoimmune β-cell destruction","ADH resistance"], a:1, e:"Type 2 = insulin resistance + relative insulin deficiency (not absolute).", l:"Lecture 3", t:"Theory"},
+            {q:"Which is an absolute indication for insulin therapy?", o:["Type 2 diabetes with HbA1c 7%","Gestational diabetes managed by diet","Type 1 diabetes mellitus","Prediabetes with obesity"], a:2, e:"Type 1 diabetes = absolute insulin deficiency → insulin is life-saving and mandatory.", l:"Lecture 3", t:"Theory"},
+            {q:"The most serious and common complication of insulin therapy is:", o:["Lipodystrophy","Hypoglycemia","Allergic reactions","Weight gain"], a:1, e:"Hypoglycemia is the most common and most serious adverse effect of insulin.", l:"Lecture 3", t:"Theory"},
+            {q:"A patient on insulin develops a firm, raised area at the injection site. This is most likely:", o:["Local allergic reaction","Lipoatrophy","Lipohypertrophy","Systemic anaphylaxis"], a:2, e:"Lipohypertrophy = fatty tissue overgrowth at repeated injection sites. Lipoatrophy = fat loss.", l:"Lecture 3", t:"Theory"},
+            {q:"Which adverse effect of insulin is characterized by fat loss at injection sites?", o:["Lipohypertrophy","Lipoatrophy","Insulin allergy","Insulin edema"], a:1, e:"Lipoatrophy = localized fat atrophy. Lipohypertrophy = fat accumulation.", l:"Lecture 3", t:"Theory"},
+            {q:"A patient with type 2 diabetes is uncontrolled on maximum oral agents. The next step is:", o:["Add a second oral agent only","Start insulin therapy","Stop all medications","Start steroids"], a:1, e:"Type 2 diabetes unresponsive to oral hypoglycemics requires insulin.", l:"Lecture 3", t:"Theory"},
+            {q:"Which patient population requires insulin and cannot be managed with oral hypoglycemics alone?", o:["Gestational diabetes","Type 2 diabetes with obesity","Type 1 diabetes","Prediabetes"], a:2, e:"Type 1 diabetes has no endogenous insulin production → insulin only.", l:"Lecture 3", t:"Theory"},
+            {q:"Systemic allergic reactions to insulin are:", o:["More common than local reactions","Less common than local reactions","Never occur","Only occur with human insulin"], a:1, e:"Local reactions (redness, swelling) are more common. Systemic reactions are rare.", l:"Lecture 3", t:"Theory"},
+            {q:"Which insulin adverse effect can be minimized by rotating injection sites?", o:["Hypoglycemia","Lipodystrophy","Allergy","Weight gain"], a:1, e:"Site rotation prevents lipohypertrophy and lipoatrophy.", l:"Lecture 3", t:"Theory"},
+            {q:"Insulin is indicated in all the following EXCEPT:", o:["Type 1 diabetes","Gestational diabetes not controlled by diet","Type 2 diabetes with oral drug failure","Prediabetes with weight loss"], a:3, e:"Prediabetes is managed with lifestyle, not insulin.", l:"Lecture 3", t:"Theory"},
+            {q:"Hypoglycemia from insulin overdose presents with all the following EXCEPT:", o:["Sweating","Confusion","Polyuria","Weakness"], a:2, e:"Polyuria is a symptom of hyperglycemia, not hypoglycemia.", l:"Lecture 3", t:"Theory"},
+            {q:"Metformin lowers blood glucose primarily by:", o:["Stimulating insulin secretion from β-cells","Decreasing hepatic glucose production and increasing insulin sensitivity","Increasing urinary glucose excretion","Delaying carbohydrate absorption in the gut"], a:1, e:"Metformin = biguanide → ↓ hepatic gluconeogenesis + ↑ peripheral insulin sensitivity.", l:"Lecture 3", t:"Theory"},
+            {q:"Which drug class increases insulin secretion by directly stimulating pancreatic β-cells?", o:["Biguanides","SGLT2 inhibitors","Sulfonylureas","Alpha-glucosidase inhibitors"], a:2, e:"Sulfonylureas and meglitinides are insulin secretagogues.", l:"Lecture 3", t:"Theory"},
+            {q:"Acarbose lowers postprandial glucose by:", o:["Increasing insulin secretion","Decreasing hepatic glucose output","Delaying carbohydrate absorption in the intestine","Increasing urinary glucose excretion"], a:2, e:"Alpha-glucosidase inhibitors delay carbohydrate digestion and absorption.", l:"Lecture 3", t:"Theory"},
+            {q:"Which drug class causes glucose to be excreted in urine?", o:["DPP-4 inhibitors","SGLT2 inhibitors","Sulfonylureas","Thiazolidinediones"], a:1, e:"SGLT2 inhibitors (gliflozins) block glucose reabsorption in kidney → glucosuria.", l:"Lecture 3", t:"Theory"},
+            {q:"Pioglitazone improves glycemic control by:", o:["Increasing insulin secretion","Increasing insulin sensitivity","Delaying glucose absorption","Excreting glucose in urine"], a:1, e:"Pioglitazone (TZD) is an insulin sensitizer (↑ peripheral glucose uptake).", l:"Lecture 3", t:"Theory"},
+            {q:"Which oral antidiabetic drug is associated with vitamin B12 deficiency?", o:["Pioglitazone","Glimepiride","Metformin","Acarbose"], a:2, e:"Long-term metformin use causes vitamin B12 deficiency.", l:"Lecture 3", t:"Theory"},
+            {q:"DPP-4 inhibitors (gliptins) increase insulin secretion by:", o:["Direct β-cell stimulation","Increasing incretin hormones (GLP-1)","Blocking glucose reabsorption","Delaying carbohydrate absorption"], a:1, e:"DPP-4 inhibitors prevent incretin breakdown → ↑ insulin, ↓ glucagon.", l:"Lecture 3", t:"Theory"},
+            {q:"Which drug class has the suffix '-gliflozin'?", o:["DPP-4 inhibitors","SGLT2 inhibitors","Sulfonylureas","Meglitinides"], a:1, e:"Gliflozins = SGLT2 inhibitors (e.g., dapagliflozin, empagliflozin).", l:"Lecture 3", t:"Theory"},
+            {q:"Which oral drug carries a risk of congestive heart failure due to fluid retention?", o:["Metformin","Pioglitazone","Glipizide","Acarbose"], a:1, e:"TZDs cause fluid retention → risk of CHF, especially with insulin.", l:"Lecture 3", t:"Theory"},
+            {q:"Which drug class causes weight gain and hypoglycemia as common adverse effects?", o:["Biguanides","SGLT2 inhibitors","Sulfonylureas","Alpha-glucosidase inhibitors"], a:2, e:"Sulfonylureas cause weight gain and hypoglycemia. Metformin causes weight loss/no hypoglycemia.", l:"Lecture 3", t:"Theory"},
+            {q:"Which oral antidiabetic drug does NOT cause hypoglycemia when used alone?", o:["Glimepiride","Repaglinide","Metformin","Glyburide"], a:2, e:"Metformin, TZDs, SGLT2 inhibitors, alpha-glucosidase inhibitors, DPP-4 inhibitors have low/no hypoglycemia risk alone.", l:"Lecture 3", t:"Theory"},
+            {q:"The most common side effects of acarbose are:", o:["Weight gain and edema","Bloating, diarrhea, flatulence","Hypoglycemia and weight gain","Urinary tract infections"], a:1, e:"Alpha-glucosidase inhibitors cause GI side effects due to undigested carbohydrates in colon.", l:"Lecture 3", t:"Theory"},
+            {q:"Which mnemonic correctly lists oral antidiabetic drug classes?", o:["M P S M A D S","A B C D E F","S U L F A","B I G U A N"], a:0, e:"M = Metformin, P = Pioglitazone, S = Sulfonylureas, M = Meglitinides, A = Alpha-glucosidase inhibitors, D = DPP-4 inhibitors, S = SGLT2 inhibitors.", l:"Lecture 3", t:"Theory"},
+            {q:"A patient taking metformin reports glossitis and oral mucosal changes. This may be due to:", o:["Hypoglycemia","Vitamin B12 deficiency","Allergic reaction","Hyperglycemia"], a:1, e:"Metformin causes B12 deficiency → glossitis and mucosal changes.", l:"Lecture 3", t:"Theory"},
+            {q:"Which sulfonylurea is mentioned in the text as having an interaction with NSAIDs?", o:["Glipizide","Glimepiride","Glyburide (Glibenclamide)","Gliclazide"], a:2, e:"Glyburide interacts with NSAIDs (increased hypoglycemia risk).", l:"Lecture 3", t:"Theory"},
+            {q:"Which drug class causes weight gain and fluid retention (edema)?", o:["Metformin","SGLT2 inhibitors","Thiazolidinediones (TZDs)","DPP-4 inhibitors"], a:2, e:"TZDs cause weight gain and fluid retention (edema, CHF risk).", l:"Lecture 3", t:"Theory"},
+            {q:"Meglitinides (repaglinide, nateglinide) differ from sulfonylureas in that they:", o:["Have a longer duration of action","Are insulin sensitizers","Have shorter onset and duration, taken with meals","Cause more hypoglycemia"], a:2, e:"Meglitinides are rapid-acting, short-duration secretagogues taken before meals.", l:"Lecture 3", t:"Theory"},
+            {q:"Which oral drug increases insulin secretion but has lower hypoglycemia risk than sulfonylureas?", o:["Metformin","Pioglitazone","Repaglinide","Acarbose"], a:2, e:"The text groups meglitinides with sulfonylureas as secretagogues; meglitinides have shorter action → less late hypoglycemia.", l:"Lecture 3", t:"Theory"},
+            {q:"Which drug is a biguanide that does not cause hypoglycemia and is often first-line for type 2 diabetes?", o:["Glipizide","Metformin","Pioglitazone","Sitagliptin"], a:1, e:"Metformin is first-line, no hypoglycemia, weight neutral/loss.", l:"Lecture 3", t:"Theory"},
+            {q:"A patient on pioglitazone develops pedal edema. The mechanism is:", o:["Increased insulin secretion","Fluid retention via PPAR-γ activation","Glucosuria","GI carbohydrate malabsorption"], a:1, e:"TZDs cause fluid retention via PPAR-γ-mediated effects on renal sodium reabsorption.", l:"Lecture 3", t:"Theory"},
+            {q:"Before elective dental surgery, a diabetic patient's HbA1c is 8.5%. The recommended action is:", o:["Proceed with surgery","Defer treatment due to poor glycemic control","Give prophylactic insulin","Double the metformin dose"], a:1, e:"HbA1c >8% → defer elective surgery due to increased infection risk and delayed healing.", l:"Lecture 3", t:"Theory"},
+            {q:"The best time to schedule a diabetic patient for a dental procedure is:", o:["Late afternoon","Morning after breakfast","During peak insulin action without food","Before breakfast"], a:1, e:"Morning appointments with breakfast eaten. Avoid peak insulin action without food (hypoglycemia risk).", l:"Lecture 3", t:"Theory"},
+            {q:"Chairside blood glucose is 65 mg/dL in a diabetic patient before a dental procedure. The dentist should:", o:["Proceed immediately","Give carbohydrates and delay the procedure","Administer insulin","Extract the tooth anyway"], a:1, e:"Glucose <70 mg/dL = hypoglycemia. Give oral glucose/sugar and delay.", l:"Lecture 3", t:"Theory"},
+            {q:"A diabetic patient has chairside glucose of 350 mg/dL without ketones. The appropriate action is:", o:["Proceed with major surgery","Give insulin immediately","Check ketones and consider deferral","No action needed"], a:2, e:"Glucose >300 mg/dL → check ketones; consider deferral due to risk of ketoacidosis and poor healing.", l:"Lecture 3", t:"Theory"},
+            {q:"Which is a sign of hypoglycemia that a dentist should recognize?", o:["Polyuria","Sudden sweating and confusion","Polydipsia","Blurred vision only"], a:1, e:"Sudden sweating, confusion, weakness = hypoglycemia.", l:"Lecture 3", t:"Theory"},
+            {q:"If a patient develops hypoglycemia during a dental procedure, the first step is:", o:["Complete the procedure quickly","Stop the procedure immediately and check blood glucose","Give insulin","Send the patient home"], a:1, e:"Stop procedure, check glucose, then manage (oral glucose if conscious).", l:"Lecture 3", t:"Theory"},
+            {q:"Antibiotic prophylaxis is indicated for dental surgery in diabetics with:", o:["HbA1c 6.5%","Multiple extractions or implants","Well-controlled type 2 diabetes","Fasting glucose 110 mg/dL"], a:1, e:"High-risk cases: multiple extractions, dental implants, any surgery with HbA1c >8%.", l:"Lecture 3", t:"Theory"},
+            {q:"Which drug class should be avoided or used cautiously in diabetic patients due to nephropathy risk?", o:["Acetaminophen","NSAIDs (long-term use)","Amoxicillin","Chlorhexidine"], a:1, e:"Long-term NSAIDs increase risk of nephropathy in diabetics.", l:"Lecture 3", t:"Theory"},
+            {q:"Steroids (e.g., dexamethasone) given to a diabetic patient can cause:", o:["Hypoglycemia","Severe hyperglycemia","Weight loss","Increased insulin sensitivity"], a:1, e:"Steroids induce insulin resistance and gluconeogenesis → severe hyperglycemia.", l:"Lecture 3", t:"Theory"},
+            {q:"In diabetic patients, post-operative care should include all EXCEPT:", o:["Chlorhexidine mouthwash","Close follow-up","Advise to ignore persistent pain","Instruct to report swelling >48 hours"], a:2, e:"Persistent pain or swelling >48 hours should be reported; ignoring is dangerous.", l:"Lecture 3", t:"Theory"}
+        ];
+
+        // --- LECTURE 4: CALCIUM HOMEOSTASIS ---
+        const mcqQuestionsL4 = [
+            {q:"What percentage of total body calcium is found in bones?", o:["50%","75%","99%","85%"], a:2, e:"Bones contain 99% of total body calcium and 85% of total body phosphorus.", l:"Lecture 4", t:"Theory"},
+            {q:"The normal serum calcium level is:", o:["5.5 – 7.5 mg/dL","8.5 – 10 mg/dL","10.5 – 12 mg/dL","3.5 – 5.0 mg/dL"], a:1, e:"Normal serum calcium = 8.5–10 mg/dL.", l:"Lecture 4", t:"Theory"},
+            {q:"Only what percentage of total body calcium is biologically active?", o:["10%","5%","1%","25%"], a:2, e:"Only 1% of total Ca²⁺ is biologically active; 99% is in bone.", l:"Lecture 4", t:"Theory"},
+            {q:"Which body function requires calcium for activation of clotting factors?", o:["Nerve excitability","Blood coagulation","Hormone release","Cardiac contraction"], a:1, e:"Calcium is required for activation of clotting factors in the blood coagulation cascade.", l:"Lecture 4", t:"Theory"},
+            {q:"Calcium is essential for neurotransmitter release in which system?", o:["Cardiovascular system","Endocrine system","Central nervous system (CNS)","Musculoskeletal system"], a:2, e:"Calcium plays a role in neurotransmitter release in the CNS.", l:"Lecture 4", t:"Theory"},
+            {q:"Bone resorption refers to:", o:["Transfer of Ca²⁺ from blood to bone","Transfer of Ca²⁺ from bone to blood","Formation of new bone","Excretion of calcium in urine"], a:1, e:"Bone resorption = release of calcium from bone into blood. Bone accretion = blood to bone.", l:"Lecture 4", t:"Theory"},
+            {q:"Which of the following is NOT a function of calcium?", o:["Membrane excitability","Platelet aggregation inhibition","Cardiac contraction","Hormone release"], a:1, e:"Calcium promotes platelet aggregation (not inhibition). All others are correct functions.", l:"Lecture 4", t:"Theory"},
+            {q:"The percentage of total body phosphorus found in bones is:", o:["99%","85%","50%","25%"], a:1, e:"Bones contain 85% of total body phosphorus.", l:"Lecture 4", t:"Theory"},
+            {q:"Which system requires calcium for muscle contraction?", o:["Endocrine only","Nerves and muscles","Blood only","CNS only"], a:1, e:"Calcium is required for membrane excitability and muscle contraction in nerves and muscles.", l:"Lecture 4", t:"Theory"},
+            {q:"Calcium is required for cardiac contraction. This falls under which system?", o:["Endocrine","CNS","Cardiovascular system (CVS)","Blood"], a:2, e:"CVS requires calcium for cardiac contraction.", l:"Lecture 4", t:"Theory"},
+            {q:"Parathyroid hormone (PTH) is secreted by:", o:["Anterior pituitary","Thyroid follicular cells","Parathyroid gland","Adrenal cortex"], a:2, e:"PTH is a polypeptide hormone secreted by the parathyroid gland.", l:"Lecture 4", t:"Theory"},
+            {q:"The secretion of PTH is primarily controlled by:", o:["Anterior pituitary (ACTH)","Hypothalamus","Plasma calcium level","Plasma sodium level"], a:2, e:"PTH is NOT controlled by the anterior pituitary; it is controlled by plasma Ca²⁺ level.", l:"Lecture 4", t:"Theory"},
+            {q:"Which statement correctly describes PTH regulation?", o:["↑ Ca²⁺ → ↑ PTH → Ca released from bone","↓ Ca²⁺ → ↓ PTH → Ca deposited in bone","↑ Ca²⁺ → ↓ PTH → Ca deposited in bone","↓ Ca²⁺ → ↓ PTH → Ca released from bone"], a:2, e:"High calcium → inhibits PTH → calcium deposited in bone. Low calcium → stimulates PTH → calcium released.", l:"Lecture 4", t:"Theory"},
+            {q:"PTH increases serum calcium by all the following mechanisms EXCEPT:", o:["Increasing bone resorption","Increasing intestinal calcium absorption","Increasing renal calcium excretion","Increasing renal calcium reabsorption"], a:2, e:"PTH increases renal calcium reabsorption (decreases excretion), not increases excretion.", l:"Lecture 4", t:"Theory"},
+            {q:"PTH increases phosphate excretion in the kidney. This results in:", o:["Hyperphosphatemia","Hypophosphatemia","No change in phosphate","Increased bone phosphate deposition"], a:1, e:"PTH increases urinary phosphate excretion → lowers serum phosphate (hypophosphatemia).", l:"Lecture 4", t:"Theory"},
+            {q:"The mechanism of action of PTH involves:", o:["Binding to nuclear receptors","Activation of adenylate cyclase → ↑ cAMP","Inhibition of cAMP","Activation of tyrosine kinase"], a:1, e:"PTH binds to PTH receptors → activates adenylate cyclase → increases cAMP.", l:"Lecture 4", t:"Theory"},
+            {q:"Primary hyperparathyroidism is most commonly caused by:", o:["Chronic renal failure","Vitamin D deficiency","Tumor of the parathyroid gland","Thyroid surgery"], a:2, e:"Primary hyperparathyroidism = parathyroid gland tumor. Secondary = response to hypocalcemia.", l:"Lecture 4", t:"Theory"},
+            {q:"Secondary hyperparathyroidism occurs in response to:", o:["Hypercalcemia","Hypocalcemia (e.g., chronic renal failure)","Parathyroid adenoma","Excessive vitamin D"], a:1, e:"Secondary hyperparathyroidism = compensatory PTH increase due to hypocalcemia (e.g., chronic kidney disease).", l:"Lecture 4", t:"Theory"},
+            {q:"Hypoparathyroidism most commonly results from:", o:["Parathyroid adenoma","Vitamin D toxicity","Removal of parathyroid glands during thyroid surgery","Chronic renal failure"], a:2, e:"Hypoparathyroidism often follows accidental removal of parathyroid glands during thyroidectomy.", l:"Lecture 4", t:"Theory"},
+            {q:"Which action is NOT mediated by PTH?", o:["Increased intestinal calcium absorption","Increased bone resorption","Decreased renal calcium reabsorption","Increased renal phosphate excretion"], a:2, e:"PTH increases (not decreases) renal calcium reabsorption.", l:"Lecture 4", t:"Theory"},
+            {q:"Vitamin D₂ (Ergocalciferol) is derived from:", o:["Animal source (cod liver)","Plant source","Skin synthesis","Bacterial fermentation"], a:1, e:"Vitamin D₂ (ergocalciferol) comes from plant sources. D₃ (cholecalciferol) from animal/skin.", l:"Lecture 4", t:"Theory"},
+            {q:"The activation of vitamin D requires hydroxylation in which two organs?", o:["Skin and bone","Liver and kidney","Intestine and liver","Kidney and parathyroid"], a:1, e:"Liver → 25-hydroxy vitamin D (calcifediol); Kidney → 1,25-dihydroxy vitamin D (calcitriol).", l:"Lecture 4", t:"Theory"},
+            {q:"The active form of vitamin D is:", o:["Ergocalciferol","Cholecalciferol","25-hydroxy vitamin D (Calcifediol)","1,25-dihydroxy vitamin D (Calcitriol)"], a:3, e:"Calcitriol (1,25-dihydroxy vitamin D) is the active form.", l:"Lecture 4", t:"Theory"},
+            {q:"Which drug can cause vitamin D deficiency (rickets) by decreasing its activation?", o:["Aspirin","Valproic acid (antiepileptic)","Metformin","Heparin"], a:1, e:"Valproic acid decreases vitamin D activation → risk of rickets.", l:"Lecture 4", t:"Theory"},
+            {q:"Vitamin D deficiency in adults causes:", o:["Rickets","Osteomalacia","Tetany","Hypercalcemia"], a:1, e:"Rickets = children; Osteomalacia = adults. Both from vitamin D deficiency.", l:"Lecture 4", t:"Theory"},
+            {q:"Which dental finding is associated with vitamin D deficiency?", o:["Early eruption of teeth","Delayed teething and retarded mandibular growth","Enamel fluorosis","Gingival hyperplasia"], a:1, e:"Vitamin D deficiency causes delayed teething and retarded mandibular growth.", l:"Lecture 4", t:"Theory"},
+            {q:"A patient presents with weight loss, headache, vomiting, diarrhea, polyuria, and polydipsia. This suggests:", o:["Vitamin D deficiency","Hypervitaminosis D","Hypoparathyroidism","Osteomalacia"], a:1, e:"Hypervitaminosis D causes weight loss, headache, vomiting, diarrhea, and renal effects.", l:"Lecture 4", t:"Theory"},
+            {q:"Which treatment is NOT used for hypervitaminosis D?", o:["Stop vitamin D","High fluid intake","Calcium supplementation","Cortisone"], a:2, e:"Hypervitaminosis D = high calcium. Treatment includes stopping vitamin D, high fluids, cortisone, low calcium diet, mineral oil, calcitonin.", l:"Lecture 4", t:"Theory"},
+            {q:"Calcitriol (1,25-dihydroxy vitamin D) acts on all the following EXCEPT:", o:["GIT → increases Ca²⁺ and phosphate absorption","Bone → regulates formation and resorption","Kidney → increases Ca²⁺ and phosphate excretion","Kidney → decreases Ca²⁺ and phosphate excretion"], a:2, e:"Vitamin D decreases (not increases) calcium and phosphate excretion in the kidney.", l:"Lecture 4", t:"Theory"},
+            {q:"Vitamin D is used clinically in all the following EXCEPT:", o:["Rickets","Osteomalacia","Secondary hyperparathyroidism (to lower PTH)","Primary hyperparathyroidism from adenoma"], a:3, e:"Vitamin D is used for secondary hyperparathyroidism (due to hypocalcemia), not primary hyperparathyroidism (tumor).", l:"Lecture 4", t:"Theory"},
+            {q:"Calcitonin is secreted by:", o:["Parathyroid chief cells","Thyroid parafollicular (C) cells","Anterior pituitary","Adrenal medulla"], a:1, e:"Calcitonin is a polypeptide hormone from thyroid parafollicular cells (C cells).", l:"Lecture 4", t:"Theory"},
+            {q:"The action of calcitonin on bone is:", o:["Increased osteoclast activity → increased resorption","Decreased osteoclast activity → decreased resorption","Increased osteoblast activity → increased formation","No effect on bone"], a:1, e:"Calcitonin decreases osteoclast activity → decreases bone resorption → lowers serum calcium.", l:"Lecture 4", t:"Theory"},
+            {q:"Which statement correctly compares calcitonin and PTH?", o:["Both increase serum calcium","Both decrease serum calcium","Calcitonin decreases serum calcium; PTH increases serum calcium","Calcitonin increases serum calcium; PTH decreases serum calcium"], a:2, e:"Calcitonin = opposite of PTH. PTH ↑ Ca²⁺, Calcitonin ↓ Ca²⁺.", l:"Lecture 4", t:"Theory"},
+            {q:"Calcitonin is used clinically in all the following EXCEPT:", o:["Osteoporosis","Hypercalcemia","Hypoparathyroidism","Paget's disease"], a:2, e:"Calcitonin lowers calcium → would worsen hypoparathyroidism (already low calcium). Used for hypercalcemia, not hypocalcemia.", l:"Lecture 4", t:"Theory"},
+            {q:"The route of administration for calcitonin includes:", o:["Oral only","Subcutaneous or nasal spray","Intravenous only","Intramuscular only"], a:1, e:"Calcitonin is given SC or as nasal spray.", l:"Lecture 4", t:"Theory"},
+            {q:"Which drug is a bisphosphonate used to increase bone density?", o:["Calcitonin","Alendronate","Estrogen","Thiazide"], a:1, e:"Alendronate is a bisphosphonate that decreases bone resorption and increases bone density.", l:"Lecture 4", t:"Theory"},
+            {q:"Alendronate must be taken:", o:["With food to reduce GI upset","On an empty stomach with the patient standing upright","At bedtime with milk","With NSAIDs for better absorption"], a:1, e:"Bisphosphonates: empty stomach, full glass of water, remain upright for 30 min to prevent esophageal irritation.", l:"Lecture 4", t:"Theory"},
+            {q:"Which condition is a contraindication to bisphosphonate therapy?", o:["Osteoporosis","Paget's disease","Peptic ulcer","Hypercalcemia"], a:2, e:"Bisphosphonates are contraindicated in peptic ulcer (GI irritation) and renal impairment.", l:"Lecture 4", t:"Theory"},
+            {q:"Thiazide diuretics affect calcium homeostasis by:", o:["Increasing calcium excretion","Decreasing calcium excretion → hypercalcemia","Increasing bone resorption","Decreasing PTH secretion"], a:1, e:"Thiazides decrease urinary calcium excretion → can cause hypercalcemia.", l:"Lecture 4", t:"Theory"},
+            {q:"Cortisone (corticosteroids) affects calcium by:", o:["Increasing calcium absorption and decreasing bone resorption","Decreasing calcium absorption and increasing bone resorption","No effect on calcium","Increasing PTH secretion"], a:1, e:"Cortisone decreases calcium absorption and increases bone resorption → can cause osteoporosis.", l:"Lecture 4", t:"Theory"},
+            {q:"Tetany is characterized by all the following EXCEPT:", o:["Muscle spasm","Hyperreflexia","Polyuria","Convulsions"], a:2, e:"Tetany features: muscle spasm, cramps, hyperreflexia, convulsions. Polyuria is not a feature.", l:"Lecture 4", t:"Theory"},
+            {q:"Which of the following causes tetany?", o:["Hyperparathyroidism","Hypoparathyroidism","Hypervitaminosis D","Osteoporosis"], a:1, e:"Hypoparathyroidism causes hypocalcemia → tetany.", l:"Lecture 4", t:"Theory"},
+            {q:"Osteoporosis is defined as:", o:["Increased bone density","Decreased bone mineral density with increased fracture risk","Excessive calcium in blood","Vitamin D toxicity"], a:1, e:"Osteoporosis = ↓ bone mineral density → ↑ fracture risk.", l:"Lecture 4", t:"Theory"},
+            {q:"Which group is at highest risk for osteoporosis?", o:["Young men","Postmenopausal women","Children with rickets","Pregnant women"], a:1, e:"Postmenopausal women (estrogen loss) are at highest risk.", l:"Lecture 4", t:"Theory"},
+            {q:"Which drug is NOT used in the treatment of osteoporosis?", o:["Bisphosphonates","Estrogens","Thiazides","Calcitonin"], a:2, e:"Thiazides are not used for osteoporosis; they treat hypertension and hypercalciuria.", l:"Lecture 4", t:"Theory"},
+            {q:"Treatment for hypercalcemia includes all the following EXCEPT:", o:["Loop diuretics","Calcitonin","Calcium supplements","Corticosteroids"], a:2, e:"Hypercalcemia treatment reduces calcium. Calcium supplements would worsen it.", l:"Lecture 4", t:"Theory"},
+            {q:"Which drug is used for hypercalcemia and acts by increasing urinary calcium excretion?", o:["Thiazides","Loop diuretics (e.g., furosemide)","Bisphosphonates","Estrogens"], a:1, e:"Loop diuretics increase calcium excretion. Thiazides decrease calcium excretion.", l:"Lecture 4", t:"Theory"},
+            {q:"In the treatment of hypervitaminosis D, mineral oil is used to:", o:["Increase calcium absorption","Decrease vitamin D absorption","Increase vitamin D activation","Treat polyuria"], a:1, e:"Mineral oil decreases absorption of vitamin D from the gut.", l:"Lecture 4", t:"Theory"},
+            {q:"Chronic cortisone use leads to osteoporosis because:", o:["It increases calcium absorption","It decreases calcium absorption and increases bone resorption","It increases PTH secretion","It increases calcitonin secretion"], a:1, e:"Corticosteroids decrease intestinal calcium absorption and increase bone resorption.", l:"Lecture 4", t:"Theory"},
+            {q:"Which statement correctly summarizes the three main regulators of calcium homeostasis?", o:["PTH and calcitonin both increase calcium; vitamin D decreases calcium","PTH increases calcium; vitamin D increases calcium; calcitonin decreases calcium","PTH decreases calcium; calcitonin increases calcium; vitamin D no effect","All three increase calcium"], a:1, e:"PTH ↑ Ca²⁺, Vitamin D ↑ Ca²⁺ (via absorption), Calcitonin ↓ Ca²⁺.", l:"Lecture 4", t:"Theory"}
+        ];
+
+        // Combine all MCQs
+        const mcqQuestions = [...mcqQuestionsL1, ...mcqQuestionsL2, ...mcqQuestionsL3, ...mcqQuestionsL4];
+
+
+        // --- DATA: T/F (120 Questions) ---
+        // Options are ["True", "False"]. a=0 is True, a=1 is False.
+
+        // --- LECTURE 1 T/F ---
+        const tfQuestionsL1 = [
+            {q:"A thrombus is always stationary, and an embolus is always mobile.", o:["True","False"], a:0, e:"By definition, thrombus is attached; embolus is free-floating.", l:"Lecture 1", t:"Theory"},
+            {q:"Venous thrombosis is treated with antiplatelet drugs as first-line therapy.", o:["True","False"], a:1, e:"Venous thrombosis is treated with anticoagulants (heparin, warfarin), not antiplatelets.", l:"Lecture 1", t:"Theory"},
+            {q:"Pulmonary embolism can result from a detached deep vein thrombus.", o:["True","False"], a:0, e:"DVT → embolus → pulmonary embolism.", l:"Lecture 1", t:"Theory"},
+            {q:"Arterial thrombi are rich in fibrin and low in platelets.", o:["True","False"], a:1, e:"Arterial thrombi are platelet-rich, venous are fibrin-rich.", l:"Lecture 1", t:"Theory"},
+            {q:"Heparin can be given orally for rapid anticoagulation.", o:["True","False"], a:1, e:"Heparin is not absorbed orally; must be given IV or SC.", l:"Lecture 1", t:"Theory"},
+            {q:"Warfarin is safe in pregnancy because it does not cross the placenta.", o:["True","False"], a:1, e:"Warfarin crosses placenta and is teratogenic.", l:"Lecture 1", t:"Theory"},
+            {q:"The antidote for heparin is protamine sulfate, which works by physical neutralization.", o:["True","False"], a:0, e:"Protamine sulfate (positive charge) binds heparin (negative charge).", l:"Lecture 1", t:"Theory"},
+            {q:"Antithrombin III is produced by the liver and inhibits thrombin and factor Xa.", o:["True","False"], a:0, e:"ATIII is a natural anticoagulant from the liver.", l:"Lecture 1", t:"Theory"},
+            {q:"Heparin enhances antithrombin III activity against only factor Xa, not thrombin.", o:["True","False"], a:1, e:"Heparin-ATIII inhibits both thrombin (IIa) and Xa.", l:"Lecture 1", t:"Theory"},
+            {q:"The intrinsic pathway is triggered by tissue factor from damaged tissue.", o:["True","False"], a:1, e:"Extrinsic pathway uses tissue factor. Intrinsic uses factor XII activation.", l:"Lecture 1", t:"Theory"},
+            {q:"Thrombin converts fibrinogen to fibrin, and factor XIIIa cross-links fibrin.", o:["True","False"], a:0, e:"Thrombin = fibrin formation; XIIIa = stabilization.", l:"Lecture 1", t:"Theory"},
+            {q:"LMWH has a higher anti-Xa to anti-IIa ratio compared to unfractionated heparin.", o:["True","False"], a:0, e:"LMWH inhibits Xa more than IIa due to shorter chain length.", l:"Lecture 1", t:"Theory"},
+            {q:"Warfarin has a rapid onset of action and is used in acute emergencies.", o:["True","False"], a:1, e:"Warfarin has slow onset (days); heparin is used in acute emergencies.", l:"Lecture 1", t:"Theory"},
+            {q:"Fresh frozen plasma is used to reverse warfarin in life-threatening bleeding.", o:["True","False"], a:0, e:"FFP provides clotting factors immediately.", l:"Lecture 1", t:"Theory"},
+            {q:"Heparin-induced thrombocytopenia (HIT) is an adverse effect unique to warfarin.", o:["True","False"], a:1, e:"HIT is unique to heparin, not warfarin.", l:"Lecture 1", t:"Theory"},
+            {q:"Factor VII has the longest half-life among vitamin K-dependent factors.", o:["True","False"], a:1, e:"Factor VII has the shortest half-life (~6 hours).", l:"Lecture 1", t:"Theory"},
+            {q:"A thrombus becomes an embolus only after it detaches from the vessel wall.", o:["True","False"], a:0, e:"That is the defining transition.", l:"Lecture 1", t:"Theory"},
+            {q:"Antiplatelet drugs are more effective than anticoagulants for preventing venous clots.", o:["True","False"], a:1, e:"Anticoagulants are superior for venous clots (fibrin-rich).", l:"Lecture 1", t:"Theory"},
+            {q:"Dabigatran is a direct thrombin inhibitor that does not require ATIII.", o:["True","False"], a:0, e:"Dabigatran directly binds and inhibits thrombin.", l:"Lecture 1", t:"Theory"},
+            {q:"Heparin crosses the blood-brain barrier and placenta easily.", o:["True","False"], a:1, e:"Heparin does NOT cross BBB or placenta due to large size and charge.", l:"Lecture 1", t:"Theory"},
+            {q:"The extrinsic pathway is faster than the intrinsic pathway in initiating clotting.", o:["True","False"], a:0, e:"Tissue factor rapidly activates factor VII.", l:"Lecture 1", t:"Theory"},
+            {q:"Vitamin K is the antidote for heparin overdose.", o:["True","False"], a:1, e:"Vitamin K is for warfarin. Protamine is for heparin.", l:"Lecture 1", t:"Theory"},
+            {q:"Warfarin inhibits the synthesis of factors II, VII, IX, X, and protein C and S.", o:["True","False"], a:0, e:"Warfarin inhibits all vitamin K-dependent factors, including natural anticoagulants.", l:"Lecture 1", t:"Theory"},
+            {q:"Thrombosis is always beneficial for stopping bleeding after injury.", o:["True","False"], a:1, e:"Thrombosis = undesired clot in vessel. Hemostasis = desired.", l:"Lecture 1", t:"Theory"},
+            {q:"LMWH does not require routine monitoring because of predictable bioavailability.", o:["True","False"], a:0, e:"LMWH has predictable response; UFH requires aPTT monitoring.", l:"Lecture 1", t:"Theory"},
+            {q:"A pulmonary embolus originates from an arterial thrombus in most cases.", o:["True","False"], a:1, e:"Most pulmonary emboli come from venous DVT.", l:"Lecture 1", t:"Theory"},
+            {q:"Thrombolytics dissolve existing clots and are first-line for stable DVT.", o:["True","False"], a:1, e:"Thrombolytics are for massive PE or stroke, not first-line for stable DVT.", l:"Lecture 1", t:"Theory"},
+            {q:"Heparin can cause osteoporosis with long-term use.", o:["True","False"], a:0, e:"Long-term heparin use is associated with osteoporosis.", l:"Lecture 1", t:"Theory"},
+            {q:"Warfarin has 100% oral bioavailability and is highly protein-bound.", o:["True","False"], a:0, e:"Warfarin is almost completely absorbed and >99% bound to plasma proteins.", l:"Lecture 1", t:"Theory"},
+            {q:"In arterial thrombosis, platelet aggregation is dominant due to low shear stress.", o:["True","False"], a:1, e:"Arterial thrombosis has high shear stress, which promotes platelet aggregation.", l:"Lecture 1", t:"Theory"}
+        ];
+
+        // --- LECTURE 2 T/F ---
+        const tfQuestionsL2 = [
+            {q:"All thrombolytic agents are enzymes that directly dissolve fibrin without needing plasminogen.", o:["True","False"], a:1, e:"Thrombolytics activate plasminogen to plasmin; plasmin dissolves fibrin.", l:"Lecture 2", t:"Theory"},
+            {q:"Streptokinase is more fibrin-specific than alteplase.", o:["True","False"], a:1, e:"Alteplase is fibrin-specific; streptokinase causes systemic fibrinolysis.", l:"Lecture 2", t:"Theory"},
+            {q:"Thrombolytics can be given orally if taken with a proton pump inhibitor.", o:["True","False"], a:1, e:"Thrombolytics are proteins; they are digested in the GI tract regardless of acid reduction.", l:"Lecture 2", t:"Theory"},
+            {q:"Alteplase is a recombinant tissue plasminogen activator (tPA).", o:["True","False"], a:0, e:"Alteplase is recombinant human tPA.", l:"Lecture 2", t:"Theory"},
+            {q:"Bleeding is less common with alteplase than with streptokinase.", o:["True","False"], a:0, e:"Fibrin specificity of alteplase reduces systemic bleeding.", l:"Lecture 2", t:"Theory"},
+            {q:"Urokinase is a recombinant drug produced in bacteria.", o:["True","False"], a:1, e:"Urokinase is naturally derived (human urine or cultured kidney cells).", l:"Lecture 2", t:"Theory"},
+            {q:"Anti-fibrinolytic drugs like tranexamic acid work by activating plasminogen.", o:["True","False"], a:1, e:"They inhibit plasminogen activation, preventing plasmin formation.", l:"Lecture 2", t:"Theory"},
+            {q:"Aminocaproic acid is useful in bleeding caused by thrombolytic overdose.", o:["True","False"], a:0, e:"It reverses the fibrinolytic state.", l:"Lecture 2", t:"Theory"},
+            {q:"Tranexamic acid is indicated for emergency treatment of pulmonary embolism.", o:["True","False"], a:1, e:"Pulmonary embolism requires thrombolytics; anti-fibrinolytics would worsen it.", l:"Lecture 2", t:"Theory"},
+            {q:"Anti-fibrinolytics are used to prevent bleeding after prostate surgery.", o:["True","False"], a:0, e:"Prostate surgery releases tissue plasminogen activators; anti-fibrinolytics help.", l:"Lecture 2", t:"Theory"},
+            {q:"Aspirin inhibits platelet aggregation by blocking ADP receptors.", o:["True","False"], a:1, e:"Aspirin blocks COX-1 → inhibits TXA2 synthesis.", l:"Lecture 2", t:"Theory"},
+            {q:"Clopidogrel irreversibly inhibits the platelet P2Y12 ADP receptor.", o:["True","False"], a:0, e:"Clopidogrel is an irreversible ADP receptor antagonist.", l:"Lecture 2", t:"Theory"},
+            {q:"Thromboxane A2 is an inhibitor of platelet aggregation.", o:["True","False"], a:1, e:"TXA2 is a potent stimulator of platelet aggregation.", l:"Lecture 2", t:"Theory"},
+            {q:"Ticlopidine causes severe neutropenia more commonly than clopidogrel.", o:["True","False"], a:0, e:"Ticlopidine has ~1% risk of severe neutropenia; clopidogrel has lower risk.", l:"Lecture 2", t:"Theory"},
+            {q:"All antiplatelet drugs significantly enhance the effects of anticoagulants.", o:["True","False"], a:0, e:"Combined use increases bleeding risk.", l:"Lecture 2", t:"Theory"},
+            {q:"Aspirin irreversibly inhibits COX-1; the effect lasts 7–10 days.", o:["True","False"], a:0, e:"Platelets cannot synthesize new COX-1.", l:"Lecture 2", t:"Theory"},
+            {q:"Platelet aggregation plays a central role in venous thrombosis.", o:["True","False"], a:1, e:"Venous thrombosis is fibrin-dominant; arterial thrombosis is platelet-dominant.", l:"Lecture 2", t:"Theory"},
+            {q:"Streptokinase is non-antigenic and can be used repeatedly without allergy risk.", o:["True","False"], a:1, e:"Streptokinase is antigenic; repeated use causes allergy and resistance.", l:"Lecture 2", t:"Theory"},
+            {q:"Alteplase and reteplase are more expensive than streptokinase.", o:["True","False"], a:0, e:"Recombinant technology is costly.", l:"Lecture 2", t:"Theory"},
+            {q:"Anti-fibrinolytics are used in menorrhagia (excessive menstrual bleeding).", o:["True","False"], a:0, e:"Tranexamic acid reduces menstrual blood loss.", l:"Lecture 2", t:"Theory"},
+            {q:"Clopidogrel causes gastrointestinal ulceration more than aspirin.", o:["True","False"], a:1, e:"Aspirin causes more GI toxicity due to direct mucosal damage + COX-1 inhibition.", l:"Lecture 2", t:"Theory"},
+            {q:"Thrombolytics are first-line treatment for stable chronic DVT.", o:["True","False"], a:1, e:"Thrombolytics are for emergencies (massive PE, acute coronary thrombosis).", l:"Lecture 2", t:"Theory"},
+            {q:"Plasmin is the endogenous enzyme that degrades fibrin.", o:["True","False"], a:0, e:"Plasmin hydrolyzes fibrin into degradation products.", l:"Lecture 2", t:"Theory"},
+            {q:"Urokinase causes less systemic bleeding than alteplase.", o:["True","False"], a:1, e:"Urokinase is non-specific → more systemic bleeding.", l:"Lecture 2", t:"Theory"},
+            {q:"Aminocaproic acid inhibits plasminogen activation and is used in hemophilia.", o:["True","False"], a:0, e:"It stabilizes clots in hemophilia.", l:"Lecture 2", t:"Theory"},
+            {q:"ADP is a chemical that inhibits platelet aggregation.", o:["True","False"], a:1, e:"ADP promotes platelet aggregation.", l:"Lecture 2", t:"Theory"},
+            {q:"Aspirin is a reversible COX-1 inhibitor.", o:["True","False"], a:1, e:"Aspirin irreversibly acetylates COX-1.", l:"Lecture 2", t:"Theory"},
+            {q:"Ticlopidine does not require blood count monitoring.", o:["True","False"], a:1, e:"Ticlopidine requires CBC monitoring for neutropenia.", l:"Lecture 2", t:"Theory"},
+            {q:"All thrombolytics must be given by intravenous infusion.", o:["True","False"], a:0, e:"They are proteins and are not absorbed orally.", l:"Lecture 2", t:"Theory"},
+            {q:"Antiplatelet drugs are more effective than anticoagulants for arterial thrombosis prevention.", o:["True","False"], a:0, e:"Arterial clots are platelet-rich → antiplatelets are first-line.", l:"Lecture 2", t:"Theory"}
+        ];
+
+        // --- LECTURE 3 T/F ---
+        const tfQuestionsL3 = [
+            {q:"A fasting blood glucose of 110 mg/dL is diagnostic for diabetes mellitus.", o:["True","False"], a:1, e:"Fasting 100-125 mg/dL = prediabetes. Diabetes requires ≥126 mg/dL.", l:"Lecture 3", t:"Theory"},
+            {q:"Polyuria in diabetes mellitus is caused by ADH deficiency.", o:["True","False"], a:1, e:"Polyuria in diabetes mellitus = osmotic diuresis from glucosuria, not ADH deficiency.", l:"Lecture 3", t:"Theory"},
+            {q:"In diabetes insipidus, the urine contains glucose and is sweet.", o:["True","False"], a:1, e:"Diabetes insipidus urine is tasteless without glucose.", l:"Lecture 3", t:"Theory"},
+            {q:"Type 1 diabetes mellitus is characterized by autoimmune destruction of pancreatic β-cells.", o:["True","False"], a:0, e:"Type 1 = autoimmune β-cell destruction → absolute insulin deficiency.", l:"Lecture 3", t:"Theory"},
+            {q:"Gestational diabetes always requires lifelong insulin therapy.", o:["True","False"], a:1, e:"Gestational diabetes usually resolves after delivery but increases future type 2 risk.", l:"Lecture 3", t:"Theory"},
+            {q:"Hypoglycemia is the most common and most serious complication of insulin therapy.", o:["True","False"], a:0, e:"Hypoglycemia is common, serious, and can be fatal.", l:"Lecture 3", t:"Theory"},
+            {q:"Lipohypertrophy refers to localized fat atrophy at insulin injection sites.", o:["True","False"], a:1, e:"Lipohypertrophy = fat overgrowth. Lipoatrophy = fat atrophy.", l:"Lecture 3", t:"Theory"},
+            {q:"Metformin causes hypoglycemia when used alone.", o:["True","False"], a:1, e:"Metformin does not cause hypoglycemia alone (only with other drugs/skipped meals).", l:"Lecture 3", t:"Theory"},
+            {q:"Pioglitazone is associated with fluid retention and risk of congestive heart failure.", o:["True","False"], a:0, e:"TZDs cause edema and can worsen or cause CHF.", l:"Lecture 3", t:"Theory"},
+            {q:"Acarbose works by increasing insulin secretion from pancreatic β-cells.", o:["True","False"], a:1, e:"Acarbose delays carbohydrate absorption in the intestine (alpha-glucosidase inhibitor).", l:"Lecture 3", t:"Theory"},
+            {q:"SGLT2 inhibitors cause glucose excretion in urine and are associated with urinary tract infections.", o:["True","False"], a:0, e:"Glucosuria increases UTI risk.", l:"Lecture 3", t:"Theory"},
+            {q:"DPP-4 inhibitors (gliptins) increase incretin hormones leading to increased insulin secretion.", o:["True","False"], a:0, e:"DPP-4 inhibitors raise GLP-1 levels.", l:"Lecture 3", t:"Theory"},
+            {q:"Sulfonylureas are insulin sensitizers that do not cause weight gain.", o:["True","False"], a:1, e:"Sulfonylureas are secretagogues (not sensitizers) and cause weight gain.", l:"Lecture 3", t:"Theory"},
+            {q:"Metformin can cause vitamin B12 deficiency leading to glossitis.", o:["True","False"], a:0, e:"Long-term metformin reduces B12 absorption.", l:"Lecture 3", t:"Theory"},
+            {q:"A dental procedure can proceed if a diabetic patient's chairside glucose is 55 mg/dL.", o:["True","False"], a:1, e:"<70 mg/dL = hypoglycemia → give carbohydrates and delay.", l:"Lecture 3", t:"Theory"},
+            {q:"Morning appointments are preferred for diabetic patients after breakfast.", o:["True","False"], a:0, e:"Reduces hypoglycemia risk; peak insulin action avoided.", l:"Lecture 3", t:"Theory"},
+            {q:"HbA1c >8% is acceptable for elective dental surgery.", o:["True","False"], a:1, e:"HbA1c >8% → defer elective surgery due to infection and healing risks.", l:"Lecture 3", t:"Theory"},
+            {q:"If a diabetic patient has chairside glucose of 320 mg/dL with ketones, the procedure should be deferred.", o:["True","False"], a:0, e:"Hyperglycemia with ketones suggests DKA risk; defer treatment.", l:"Lecture 3", t:"Theory"},
+            {q:"NSAIDs are safe for long-term use in diabetic patients.", o:["True","False"], a:1, e:"Long-term NSAIDs increase nephropathy risk in diabetics.", l:"Lecture 3", t:"Theory"},
+            {q:"Steroids (e.g., dexamethasone) can cause severe hyperglycemia in diabetic patients.", o:["True","False"], a:0, e:"Steroids induce insulin resistance and increase gluconeogenesis.", l:"Lecture 3", t:"Theory"},
+            {q:"Antibiotic prophylaxis is indicated for multiple extractions in diabetics with poor control.", o:["True","False"], a:0, e:"High-risk procedures + HbA1c >8% require prophylaxis.", l:"Lecture 3", t:"Theory"},
+            {q:"Chlorhexidine mouthwash is not useful for diabetic patients after surgery.", o:["True","False"], a:1, e:"Chlorhexidine helps prevent infection in diabetics with delayed healing.", l:"Lecture 3", t:"Theory"},
+            {q:"The mnemonic M P S M A D S represents oral antidiabetic drug classes.", o:["True","False"], a:0, e:"Metformin, Pioglitazone, Sulfonylureas, Meglitinides, Alpha-glucosidase inhibitors, DPP-4 inhibitors, SGLT2 inhibitors.", l:"Lecture 3", t:"Theory"},
+            {q:"Type 2 diabetes is less common than type 1 diabetes.", o:["True","False"], a:1, e:"Type 2 is the most common type (90-95% of cases).", l:"Lecture 3", t:"Theory"},
+            {q:"Polyphagia in diabetes refers to increased thirst.", o:["True","False"], a:1, e:"Polyphagia = increased hunger. Polydipsia = increased thirst.", l:"Lecture 3", t:"Theory"},
+            {q:"A random blood glucose of 250 mg/dL without symptoms is diagnostic for diabetes.", o:["True","False"], a:1, e:"Random glucose ≥200 mg/dL requires symptoms for diagnosis; otherwise requires confirmatory test.", l:"Lecture 3", t:"Theory"},
+            {q:"Meglitinides have a shorter duration of action than sulfonylureas.", o:["True","False"], a:0, e:"Meglitinides are rapid-acting and short-duration.", l:"Lecture 3", t:"Theory"},
+            {q:"Pioglitazone can be safely used in patients with heart failure.", o:["True","False"], a:1, e:"TZDs are contraindicated in CHF due to fluid retention.", l:"Lecture 3", t:"Theory"},
+            {q:"In a hypoglycemic emergency during a dental procedure, the dentist should give oral glucose if patient is conscious.", o:["True","False"], a:0, e:"Oral glucose (juice, sugar) is first-line for conscious hypoglycemic patient.", l:"Lecture 3", t:"Theory"},
+            {q:"Diabetic patients have delayed wound healing and increased risk of dry socket post-extraction.", o:["True","False"], a:0, e:"Poor glycemic control impairs healing and increases infection and dry socket risk.", l:"Lecture 3", t:"Theory"}
+        ];
+
+        // --- LECTURE 4 T/F ---
+        const tfQuestionsL4 = [
+            {q:"Bones contain 85% of total body calcium and 99% of total body phosphorus.", o:["True","False"], a:1, e:"Bones contain 99% calcium and 85% phosphorus (opposite).", l:"Lecture 4", t:"Theory"},
+            {q:"Only 1% of total body calcium is biologically active.", o:["True","False"], a:0, e:"99% is in bone; 1% is in blood and biologically active.", l:"Lecture 4", t:"Theory"},
+            {q:"PTH secretion is controlled by the anterior pituitary gland.", o:["True","False"], a:1, e:"PTH is controlled by plasma calcium level, NOT by the pituitary.", l:"Lecture 4", t:"Theory"},
+            {q:"High plasma calcium stimulates PTH secretion.", o:["True","False"], a:1, e:"High calcium decreases PTH secretion (negative feedback).", l:"Lecture 4", t:"Theory"},
+            {q:"PTH increases renal phosphate excretion and increases renal calcium reabsorption.", o:["True","False"], a:0, e:"PTH causes phosphaturia and calcium retention.", l:"Lecture 4", t:"Theory"},
+            {q:"Primary hyperparathyroidism is caused by chronic renal failure.", o:["True","False"], a:1, e:"Chronic renal failure causes secondary hyperparathyroidism. Primary = parathyroid tumor.", l:"Lecture 4", t:"Theory"},
+            {q:"Vitamin D₃ (cholecalciferol) is obtained from plant sources.", o:["True","False"], a:1, e:"Vitamin D₃ = animal source (cod liver) or skin synthesis. D₂ = plant source.", l:"Lecture 4", t:"Theory"},
+            {q:"The liver converts 25-hydroxy vitamin D to the active 1,25-dihydroxy vitamin D.", o:["True","False"], a:1, e:"Liver produces 25-hydroxy vitamin D; kidney produces active 1,25-dihydroxy vitamin D.", l:"Lecture 4", t:"Theory"},
+            {q:"Valproic acid can cause rickets by decreasing vitamin D activation.", o:["True","False"], a:0, e:"Valproic acid (antiepileptic) reduces vitamin D activation.", l:"Lecture 4", t:"Theory"},
+            {q:"Vitamin D deficiency causes rickets in children and osteomalacia in adults.", o:["True","False"], a:0, e:"Rickets (children) = defective bone mineralization; osteomalacia (adults).", l:"Lecture 4", t:"Theory"},
+            {q:"Delayed teething is a dental manifestation of vitamin D deficiency.", o:["True","False"], a:0, e:"Vitamin D deficiency causes delayed teething and retarded mandibular growth.", l:"Lecture 4", t:"Theory"},
+            {q:"Hypervitaminosis D causes hypocalcemia.", o:["True","False"], a:1, e:"Hypervitaminosis D causes hypercalcemia (excessive calcium absorption).", l:"Lecture 4", t:"Theory"},
+            {q:"Cortisone is used to treat hypervitaminosis D.", o:["True","False"], a:0, e:"Cortisone decreases calcium absorption and is used in hypervitaminosis D.", l:"Lecture 4", t:"Theory"},
+            {q:"Calcitonin increases osteoclast activity and increases serum calcium.", o:["True","False"], a:1, e:"Calcitonin decreases osteoclast activity and decreases serum calcium.", l:"Lecture 4", t:"Theory"},
+            {q:"Calcitonin is used to treat hypocalcemia.", o:["True","False"], a:1, e:"Calcitonin lowers calcium → used for hypercalcemia, not hypocalcemia.", l:"Lecture 4", t:"Theory"},
+            {q:"Alendronate should be taken with food to improve absorption.", o:["True","False"], a:1, e:"Alendronate is taken on an empty stomach; food decreases absorption.", l:"Lecture 4", t:"Theory"},
+            {q:"Bisphosphonates are contraindicated in patients with peptic ulcer disease.", o:["True","False"], a:0, e:"Bisphosphonates cause GI irritation; contraindicated in peptic ulcer.", l:"Lecture 4", t:"Theory"},
+            {q:"Thiazide diuretics increase urinary calcium excretion.", o:["True","False"], a:1, e:"Thiazides decrease calcium excretion (can cause hypercalcemia).", l:"Lecture 4", t:"Theory"},
+            {q:"Estrogens prevent bone resorption and are used in postmenopausal osteoporosis.", o:["True","False"], a:0, e:"Estrogen replacement reduces bone resorption.", l:"Lecture 4", t:"Theory"},
+            {q:"Tetany is characterized by muscle spasm, hyperreflexia, and convulsions.", o:["True","False"], a:0, e:"Tetany results from hypocalcemia with neuromuscular hyperexcitability.", l:"Lecture 4", t:"Theory"},
+            {q:"Tetany can be caused by hyperparathyroidism.", o:["True","False"], a:1, e:"Tetany is caused by hypoparathyroidism (low PTH → low calcium).", l:"Lecture 4", t:"Theory"},
+            {q:"Osteoporosis is defined by increased bone mineral density.", o:["True","False"], a:1, e:"Osteoporosis = decreased bone mineral density.", l:"Lecture 4", t:"Theory"},
+            {q:"Postmenopausal women are at high risk for osteoporosis due to estrogen loss.", o:["True","False"], a:0, e:"Estrogen deficiency increases bone resorption.", l:"Lecture 4", t:"Theory"},
+            {q:"Loop diuretics are used to treat hypercalcemia.", o:["True","False"], a:0, e:"Loop diuretics increase calcium excretion.", l:"Lecture 4", t:"Theory"},
+            {q:"EDTA is used to treat hypercalcemia by chelating calcium.", o:["True","False"], a:0, e:"EDTA binds calcium and increases its excretion.", l:"Lecture 4", t:"Theory"},
+            {q:"Calcitonin is available as an oral tablet for osteoporosis.", o:["True","False"], a:1, e:"Calcitonin is given SC or nasal spray, not orally.", l:"Lecture 4", t:"Theory"},
+            {q:"Fluorides decrease bone fractures in osteoporosis.", o:["True","False"], a:0, e:"Fluorides are used to reduce bone fractures (increase bone density).", l:"Lecture 4", t:"Theory"},
+            {q:"Cortisone increases calcium absorption from the gut.", o:["True","False"], a:1, e:"Cortisone decreases calcium absorption.", l:"Lecture 4", t:"Theory"},
+            {q:"Vitamin D increases both calcium and phosphate absorption from the GIT.", o:["True","False"], a:0, e:"Vitamin D increases absorption of both.", l:"Lecture 4", t:"Theory"},
+            {q:"The three main regulators (PTH, vitamin D, calcitonin) work independently with no interaction.", o:["True","False"], a:1, e:"They work together in a coordinated feedback system to maintain calcium homeostasis.", l:"Lecture 4", t:"Theory"}
+        ];
+
+        // Combine all T/F
+        const tfQuestions = [...tfQuestionsL1, ...tfQuestionsL2, ...tfQuestionsL3, ...tfQuestionsL4];
+
+
+        // --- LECTURE CONFIGURATION ---
+        const lecturesConfig = [
+            { id: 1, title: "Lecture 1: Coagulation & Anticoagulants", mcqCount: 50, tfCount: 30 },
+            { id: 2, title: "Lecture 2: Thrombolytics & Antiplatelets", mcqCount: 50, tfCount: 30 },
+            { id: 3, title: "Lecture 3: Diabetes & Antidiabetics", mcqCount: 50, tfCount: 30 },
+            { id: 4, title: "Lecture 4: Calcium Homeostasis", mcqCount: 50, tfCount: 30 }
+        ];
+
+        // --- STATE VARIABLES ---
+        let currentMode = null; // 'mcq' or 'tf'
+        let currentLectureId = null;
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let currentCorrectAnswerIndex = 0; // Holds the index of the correct answer for the CURRENT loaded question
+        let timerInterval;
+        let timeLeft = 60;
+        const TIME_PER_QUESTION = 60;
+
+        // --- INIT ---
+        document.addEventListener("DOMContentLoaded", () => {
+            // Start at Mode Screen
+        });
+
+        // --- UI FUNCTIONS ---
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            document.getElementById('mode-title-display').textContent = mode === 'mcq' ? "Multiple Choice Questions" : "True / False Questions";
+            renderLectureCards();
+            switchView('lecture-screen');
+        }
+
+        function goToModeScreen() {
+            switchView('mode-screen');
+        }
+
+        function goToLectureScreen() {
+            renderLectureCards();
+            switchView('lecture-screen');
+        }
+
+        function goHome() {
+            clearInterval(timerInterval);
+            switchView('mode-screen');
+        }
+
+        function renderLectureCards() {
+            const container = document.getElementById('lectures-container');
+            container.innerHTML = '';
+
+            lecturesConfig.forEach(lec => {
+                const count = currentMode === 'mcq' ? lec.mcqCount : lec.tfCount;
+                const storageKey = `pharmaBoss_${currentMode}_L${lec.id}`;
+                const savedState = JSON.parse(localStorage.getItem(storageKey));
+                
+                let btnText = "Start Quiz";
+                let statusClass = "";
+                let statusText = "";
+
+                if (savedState) {
+                    if (savedState.finished) {
+                        btnText = "Review Results";
+                        statusText = `Completed: ${savedState.score}%`;
+                        statusClass = "completed";
+                    } else {
+                        btnText = "Resume Quiz";
+                        statusText = `Progress: Q${savedState.index + 1}/${count}`;
+                        statusClass = "active";
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = 'lecture-card';
+                card.onclick = () => startLecture(lec.id);
+                card.innerHTML = `
+                    <div class="lecture-info">
+                        <h3>${lec.title}</h3>
+                        <p>${count} Questions</p>
+                    </div>
+                    <div class="lecture-status">
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                        <div style="margin-top:5px; font-size:0.85rem; color:var(--primary-color); font-weight:bold;">${btnText} &rarr;</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- SHUFFLE FUNCTION ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // --- QUIZ LOGIC ---
+
+        function startLecture(id) {
+            currentLectureId = id;
+            const lecConfig = lecturesConfig.find(l => l.id === id);
+            
+            // Slice data based on mode
+            let startIndex = 0;
+            let count = 0;
+            
+            if (currentMode === 'mcq') {
+                if(id===1) { startIndex=0; count=50; }
+                if(id===2) { startIndex=50; count=50; }
+                if(id===3) { startIndex=100; count=50; }
+                if(id===4) { startIndex=150; count=50; }
+                currentQuestions = mcqQuestions.slice(startIndex, startIndex+count);
+            } else {
+                if(id===1) { startIndex=0; count=30; }
+                if(id===2) { startIndex=30; count=30; }
+                if(id===3) { startIndex=60; count=30; }
+                if(id===4) { startIndex=90; count=30; }
+                currentQuestions = tfQuestions.slice(startIndex, startIndex+count);
+            }
+            
+            // Check for saved state
+            const savedState = JSON.parse(localStorage.getItem(`pharmaBoss_${currentMode}_L${id}`));
+            
+            if (savedState && !savedState.finished) {
+                currentIndex = savedState.index;
+                score = savedState.score;
+            } else {
+                currentIndex = 0;
+                score = 0;
+            }
+
+            if (savedState && savedState.finished) {
+                showResults(savedState.score, savedState.correct, savedState.wrong);
+                return;
+            }
+
+            switchView('quiz-screen');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = currentQuestions[currentIndex];
+            document.getElementById('current-lecture-tag').textContent = lecturesConfig.find(l=>l.id===currentLectureId).title;
+            document.getElementById('question-text').textContent = q.q;
+            document.getElementById('q-counter').textContent = `Question ${currentIndex + 1} / ${currentQuestions.length}`;
+            
+            // Progress Bar
+            const percent = ((currentIndex) / currentQuestions.length) * 100;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            let optionsToRender = [...q.o]; // Copy options
+
+            // RANDOMIZE LOGIC
+            if (currentMode === 'mcq') {
+                // Shuffle options for MCQ
+                shuffleArray(optionsToRender);
+                // Find where the correct answer text is now located in the shuffled array
+                const originalCorrectText = q.o[q.a];
+                currentCorrectAnswerIndex = optionsToRender.indexOf(originalCorrectText);
+            } else {
+                // Do NOT shuffle for T/F, keep order [True, False]
+                currentCorrectAnswerIndex = q.a;
+            }
+            
+            // Render buttons
+            optionsToRender.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => handleAnswer(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            // Reset UI
+            document.getElementById('explanation-box').classList.remove('show');
+            document.getElementById('next-btn').style.display = 'none';
+            
+            // Reset Timer
+            startTimer();
+            saveProgress(); 
+        }
+
+        function handleAnswer(selectedIndex, btnElement) {
+            clearInterval(timerInterval);
+            
+            // Use currentCorrectAnswerIndex instead of q.a
+            const isCorrect = (selectedIndex === currentCorrectAnswerIndex);
+            
+            // Disable all buttons
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => b.disabled = true);
+
+            if (isCorrect) {
+                btnElement.classList.add('correct');
+                score++;
+            } else {
+                btnElement.classList.add('wrong');
+                // Highlight correct one using the dynamic index
+                buttons[currentCorrectAnswerIndex].classList.add('correct');
+            }
+
+            // Show Explanation
+            const q = currentQuestions[currentIndex];
+            document.getElementById('explanation-text').textContent = q.e;
+            document.getElementById('explanation-box').classList.add('show');
+            document.getElementById('next-btn').style.display = 'inline-flex';
+
+            // Update progress bar to include current step
+            const percent = ((currentIndex + 1) / currentQuestions.length) * 100;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+
+            saveProgress(); 
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < currentQuestions.length) {
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            const total = currentQuestions.length;
+            const wrong = total - score;
+            const percentage = Math.round((score / total) * 100);
+            
+            // Save Finished State
+            const finalState = {
+                finished: true,
+                score: percentage,
+                correct: score,
+                wrong: wrong,
+                index: total
+            };
+            localStorage.setItem(`pharmaBoss_${currentMode}_L${currentLectureId}`, JSON.stringify(finalState));
+            
+            showResults(percentage, score, wrong);
+        }
+
+        function showResults(percentage, correct, wrong) {
+            switchView('result-screen');
+            const title = lecturesConfig.find(l=>l.id===currentLectureId).title;
+            document.getElementById('result-lecture-title').textContent = title + " Completed!";
+            document.getElementById('final-score').textContent = percentage + "%";
+            document.getElementById('final-correct').textContent = correct;
+            document.getElementById('final-wrong').textContent = wrong;
+        }
+
+        function restartCurrentLecture() {
+            localStorage.removeItem(`pharmaBoss_${currentMode}_L${currentLectureId}`);
+            startLecture(currentLectureId);
+        }
+
+        // --- TIMER & SAVE ---
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_PER_QUESTION;
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeUp();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const el = document.getElementById('timer-display');
+            document.getElementById('time-left').textContent = timeLeft;
+            if(timeLeft <= 10) el.classList.add('warning');
+            else el.classList.remove('warning');
+        }
+
+        function handleTimeUp() {
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => b.disabled = true);
+            
+            // Highlight correct answer using the dynamic index
+            buttons[currentCorrectAnswerIndex].classList.add('correct'); 
+            
+            const q = currentQuestions[currentIndex];
+            document.getElementById('explanation-text').textContent = "Time's up! " + q.e;
+            document.getElementById('explanation-box').classList.add('show');
+            document.getElementById('next-btn').style.display = 'inline-flex';
+            saveProgress();
+        }
+
+        function saveProgress() {
+            const state = {
+                index: currentIndex,
+                score: score,
+                finished: false
+            };
+            localStorage.setItem(`pharmaBoss_${currentMode}_L${currentLectureId}`, JSON.stringify(state));
+        }
+
+        function clearAllData() {
+            if(confirm("Are you sure you want to reset all quiz progress for both modes? This cannot be undone.")) {
+                localStorage.clear();
+                renderLectureCards();
+                alert("All data has been reset.");
+            }
+        }
+    </script>
+</body>
+</html>
